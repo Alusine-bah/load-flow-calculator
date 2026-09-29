@@ -1,0 +1,15 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor folders
+.vscode/
+.idea/
+
+# Node (if we ever add tooling)
+node_modules/
+npm-debug.log*
+
+# Temporary test scaffolding (we write these during development)
+js/test_*.js
