@@ -13,3 +13,13 @@ npm-debug.log*
 
 # Temporary test scaffolding (we write these during development)
 js/test_*.js
+
+# Scratch / diagnostics
+diagnose-gs.js
+test-5bus.js
+
+# Placeholder files (commit when they have content)
+js/lineflow.js
+js/main.js
+js/render.js
+index.html
