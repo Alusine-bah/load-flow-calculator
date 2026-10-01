@@ -20,6 +20,4 @@ test-5bus.js
 
 # Placeholder files (commit when they have content)
 js/lineflow.js
-js/main.js
 js/render.js
-index.html

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Load Flow Calculator</title>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>Load Flow Calculator</h1>
+  <p class="subtitle">
+    Newton–Raphson and Gauss–Seidel power-flow solvers, verified by
+    cross-algorithm agreement. Pick a system and solve.
+  </p>
+</header>
+
+<main>
+
+  <section class="controls">
+    <label for="system-select">System:</label>
+    <select id="system-select">
+      <option value="4bus">4-bus (Stevenson / Saadat)</option>
+      <option value="9bus">IEEE 9-bus</option>
+      <option value="5bus">IEEE 5-bus</option>
+    </select>
+
+    <label for="method-select">Method:</label>
+    <select id="method-select">
+      <option value="newton">Newton–Raphson</option>
+      <option value="gs">Gauss–Seidel</option>
+    </select>
+
+    <button id="solve-btn">Solve</button>
+  </section>
+
+  <section id="output" class="output">
+    <p class="hint">Choose a system and click <strong>Solve</strong>.</p>
+  </section>
+
+</main>
+
+<script src="js/complex.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ybus.js"></script>
+<script src="js/newton.js"></script>
+<script src="js/gaussseidel.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
