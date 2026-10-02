@@ -1,11 +1,14 @@
 // report.js
 // Engineering report generator
+//
 // Includes:
 // - Load flow results
 // - Line flow
 // - Thermal loading
 // - Fault analysis
 // - Fault studies
+// - Contingency security assessment
+
 
 
 function createLoadFlowReport(
@@ -16,7 +19,8 @@ function createLoadFlowReport(
   lineRatings = null,
   faultReport = null,
   faultLocationStudy = null,
-  faultSeverityStudy = null
+  faultSeverityStudy = null,
+  contingencyRanking = null
 ) {
 
 
@@ -64,14 +68,18 @@ function createLoadFlowReport(
 
       result.buses.map(bus => ({
 
+
         id:
           bus.id,
+
 
         type:
           bus.type,
 
+
         voltage:
           bus.V,
+
 
         angle:
           bus.delta_deg,
@@ -90,6 +98,7 @@ function createLoadFlowReport(
             baseMVA
           )
 
+
       })),
 
 
@@ -97,14 +106,19 @@ function createLoadFlowReport(
     lines:
 
       lineFlows
+
       ?
+
       lineFlows.map(line => ({
+
 
         from:
           line.from,
 
+
         to:
           line.to,
+
 
         P_loss_MW:
           puToMW(
@@ -112,20 +126,26 @@ function createLoadFlowReport(
             baseMVA
           ),
 
+
         Q_loss_MVAR:
           puToMVAR(
             line.Q_loss,
             baseMVA
           ),
 
+
         flow_MVA:
           line.S_from_MVA,
+
 
         current_kA:
           line.current_kA
 
+
       }))
+
       :
+
       [],
 
 
@@ -150,8 +170,14 @@ function createLoadFlowReport(
 
 
 
+    contingency:
+      contingencyRanking || [],
+
+
+
     voltage:
       voltageReport || null
+
 
   };
 
@@ -161,12 +187,18 @@ function createLoadFlowReport(
 
 
 
-function printLoadFlowReport(report) {
+
+
+
+function printLoadFlowReport(
+  report
+) {
 
 
   console.log(
     "\nPOWER FLOW ENGINEERING REPORT"
   );
+
 
   console.log(
     "=============================="
@@ -174,9 +206,16 @@ function printLoadFlowReport(report) {
 
 
 
-  console.log("\nSYSTEM");
 
-  console.log("------------------------------");
+
+  console.log(
+    "\nSYSTEM"
+  );
+
+
+  console.log(
+    "------------------------------"
+  );
 
 
   console.log(
@@ -206,9 +245,15 @@ function printLoadFlowReport(report) {
 
 
 
-  console.log("\nSOLVER");
 
-  console.log("------------------------------");
+  console.log(
+    "\nSOLVER"
+  );
+
+
+  console.log(
+    "------------------------------"
+  );
 
 
   console.log(
@@ -232,20 +277,50 @@ function printLoadFlowReport(report) {
 
 
 
-  console.log("\nLINE THERMAL LOADING");
-
-  console.log("------------------------------");
 
 
-  for (const line of report.lineRatings) {
+
+  if (report.lineRatings.length) {
+
 
     console.log(
-      `${line.from}-${line.to}  ` +
-      `${line.loading_percent.toFixed(2)}%  ` +
-      `${line.status}`
+      "\nLINE THERMAL LOADING"
     );
 
+
+    console.log(
+      "------------------------------"
+    );
+
+
+
+    console.log(
+      "Line   Loading   Status"
+    );
+
+
+
+    for (const line of report.lineRatings) {
+
+
+      console.log(
+
+        `${line.from}-${line.to}   ` +
+
+        `${line.loading_percent.toFixed(2)}%   ` +
+
+        `${line.status}`
+
+      );
+
+
+    }
+
+
   }
+
+
+
 
 
 
@@ -254,9 +329,15 @@ function printLoadFlowReport(report) {
   if (report.fault) {
 
 
-    console.log("\nFAULT ANALYSIS");
+    console.log(
+      "\nFAULT ANALYSIS"
+    );
 
-    console.log("------------------------------");
+
+    console.log(
+      "------------------------------"
+    );
+
 
 
     console.log(
@@ -284,7 +365,11 @@ function printLoadFlowReport(report) {
       "MVA"
     );
 
+
   }
+
+
+
 
 
 
@@ -293,9 +378,14 @@ function printLoadFlowReport(report) {
   if (report.faultLocation.length) {
 
 
-    console.log("\nFAULT LOCATION STUDY");
+    console.log(
+      "\nFAULT LOCATION STUDY"
+    );
 
-    console.log("------------------------------");
+
+    console.log(
+      "------------------------------"
+    );
 
 
     console.log(
@@ -317,9 +407,14 @@ function printLoadFlowReport(report) {
 
       );
 
+
     }
 
+
   }
+
+
+
 
 
 
@@ -328,9 +423,14 @@ function printLoadFlowReport(report) {
   if (report.faultSeverity.length) {
 
 
-    console.log("\nFAULT SEVERITY STUDY");
+    console.log(
+      "\nFAULT SEVERITY STUDY"
+    );
 
-    console.log("------------------------------");
+
+    console.log(
+      "------------------------------"
+    );
 
 
     console.log(
@@ -352,16 +452,73 @@ function printLoadFlowReport(report) {
 
       );
 
+
     }
 
+
   }
+
+
+
+
+
+
+
+
+  if (report.contingency.length) {
+
+
+    console.log(
+      "\nCONTINGENCY SECURITY ASSESSMENT"
+    );
+
+
+    console.log(
+      "--------------------------------"
+    );
+
+
+    console.log(
+      "Rank Outage Score Severity Reason"
+    );
+
+
+
+    for (const c of report.contingency) {
+
+
+      console.log(
+
+        `${c.rank}    ` +
+
+        `${c.outage}    ` +
+
+        `${c.score.toFixed(3)}   ` +
+
+        `${c.severity}   ` +
+
+        `${c.reason}`
+
+      );
+
+
+    }
+
+
+  }
+
 
 }
 
 
 
+
+
+
+
 window.createLoadFlowReport =
   createLoadFlowReport;
+
 
 
 window.printLoadFlowReport =

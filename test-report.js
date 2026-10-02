@@ -1,5 +1,9 @@
 // test-report.js
-// Test complete load flow report with fault analysis and fault studies
+// Test complete load flow report
+// Includes:
+// - Fault analysis
+// - Fault studies
+// - Contingency security assessment
 
 
 global.window = global;
@@ -18,7 +22,9 @@ require('./js/models.js');
 require('./js/system-loader-v2.js');
 
 
+// ======================================
 // Network
+// ======================================
 
 require('./js/ybus.js');
 
@@ -31,7 +37,9 @@ require('./js/matrix-inverse.js');
 require('./js/zbus.js');
 
 
+// ======================================
 // Solver
+// ======================================
 
 require('./js/results.js');
 
@@ -42,7 +50,9 @@ require('./js/newton-v2.js');
 require('./js/solver.js');
 
 
+// ======================================
 // Analysis
+// ======================================
 
 require('./js/units.js');
 
@@ -59,7 +69,22 @@ require('./js/fault-study.js');
 require('./js/fault-location-study.js');
 
 
+// Contingency
+
+require('./js/contingency.js');
+
+require('./js/contingency-analysis.js');
+
+require('./js/contingency-thermal.js');
+
+require('./js/contingency-ranking.js');
+
+require('./js/contingency-ranking-report.js');
+
+
+// ======================================
 // Report
+// ======================================
 
 require('./js/report.js');
 
@@ -72,6 +97,21 @@ require('./js/report.js');
 
 const system =
   loadSystemV2("4bus");
+
+
+
+
+// ======================================
+// Line ratings
+// ======================================
+
+system.lines[0].ratingMVA = 100;
+
+system.lines[1].ratingMVA = 80;
+
+system.lines[2].ratingMVA = 50;
+
+system.lines[3].ratingMVA = 20;
 
 
 
@@ -105,18 +145,8 @@ const lineFlows =
 
 
 // ======================================
-// Line ratings
+// Line thermal loading
 // ======================================
-
-system.lines[0].ratingMVA = 100;
-
-system.lines[1].ratingMVA = 80;
-
-system.lines[2].ratingMVA = 50;
-
-system.lines[3].ratingMVA = 20;
-
-
 
 const lineRatings =
   analyzeLineRatings(
@@ -216,7 +246,25 @@ const faultSeverityStudy =
 
 
 // ======================================
-// Create report
+// Contingency ranking
+// ======================================
+
+const contingencyRaw =
+  runContingencyRanking(
+    system
+  );
+
+
+const contingencyRanking =
+  createContingencyRankingReport(
+    contingencyRaw
+  );
+
+
+
+
+// ======================================
+// Create engineering report
 // ======================================
 
 const report =
@@ -236,7 +284,9 @@ const report =
 
     faultLocationStudy,
 
-    faultSeverityStudy
+    faultSeverityStudy,
+
+    contingencyRanking
 
   );
 
