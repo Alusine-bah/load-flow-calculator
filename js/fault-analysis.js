@@ -22,8 +22,12 @@ function calculateFaultCurrent(
 ) {
 
 
-  const Zth =
-    zbus[faultBus][faultBus];
+ const index =
+  faultBus - 1;
+
+
+const Zth =
+  zbus[index][index];
 
 
   const Zf =
