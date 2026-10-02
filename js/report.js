@@ -1,5 +1,5 @@
 // report.js
-// Load flow engineering report generator
+// Engineering load flow report generator with real units
 
 
 function createLoadFlowReport(
@@ -10,18 +10,18 @@ function createLoadFlowReport(
 ) {
 
 
+  const baseMVA = system.baseMVA;
+
+
+
   const report = {
 
-
-    // ======================================
-    // System information
-    // ======================================
 
     system: {
 
       name: system.name,
 
-      baseMVA: system.baseMVA,
+      baseMVA: baseMVA,
 
       numberOfBuses:
         system.buses.length,
@@ -33,13 +33,10 @@ function createLoadFlowReport(
 
 
 
-    // ======================================
-    // Solver information
-    // ======================================
-
     solver: {
 
-      method: result.method,
+      method:
+        result.method,
 
       converged:
         result.converged,
@@ -51,46 +48,84 @@ function createLoadFlowReport(
 
 
 
-    // ======================================
-    // Bus results
-    // ======================================
+    buses:
 
-    buses: result.buses.map(
-      bus => ({
+      result.buses.map(bus => ({
 
         id: bus.id,
 
         type: bus.type,
 
-        voltage:
-          bus.V,
+        voltage: bus.V,
 
         angle:
           bus.delta_deg,
 
-        P:
+        P_pu:
           bus.P_calc,
 
-        Q:
-          bus.Q_calc
-
-      })
-    ),
+        Q_pu:
+          bus.Q_calc,
 
 
+        P_MW:
+          puToMW(
+            bus.P_calc,
+            baseMVA
+          ),
 
-    // ======================================
-    // Line flow results
-    // ======================================
+
+        Q_MVAR:
+          puToMVAR(
+            bus.Q_calc,
+            baseMVA
+          )
+
+      })),
+
+
 
     lines:
-      lineFlows || [],
+
+      lineFlows
+        ? lineFlows.map(line => ({
 
 
+            from:
+              line.from,
 
-    // ======================================
-    // Voltage analysis
-    // ======================================
+
+            to:
+              line.to,
+
+
+            P_loss_MW:
+              puToMW(
+                line.P_loss,
+                baseMVA
+              ),
+
+
+            Q_loss_MVAR:
+              puToMVAR(
+                line.Q_loss,
+                baseMVA
+              ),
+
+
+            loss_MVA:
+              calculateMVA(
+                line.P_loss,
+                line.Q_loss,
+                baseMVA
+              )
+
+
+          }))
+
+        : [],
+
+
 
     voltage:
 
@@ -111,15 +146,15 @@ function createLoadFlowReport(
 function printLoadFlowReport(report) {
 
 
-  console.log("\nPOWER FLOW REPORT");
+  console.log("\nPOWER FLOW ENGINEERING REPORT");
 
-  console.log("==================\n");
+  console.log("==============================\n");
 
 
 
   console.log("SYSTEM");
 
-  console.log("------------------");
+  console.log("------------------------------");
 
   console.log(
     "Name:",
@@ -146,9 +181,10 @@ function printLoadFlowReport(report) {
 
 
 
+
   console.log("\nSOLVER");
 
-  console.log("------------------");
+  console.log("------------------------------");
 
 
   console.log(
@@ -170,13 +206,14 @@ function printLoadFlowReport(report) {
 
 
 
-  console.log("\nBUS RESULTS");
 
-  console.log("------------------");
+  console.log("\nBUS VOLTAGE RESULTS");
+
+  console.log("------------------------------");
 
 
   console.log(
-    "Bus   V(pu)   Angle(deg)"
+    "Bus   V(pu)   Angle(deg)   P(MW)     Q(MVAR)"
   );
 
 
@@ -190,7 +227,11 @@ function printLoadFlowReport(report) {
 
       `${bus.voltage.toFixed(4)}   ` +
 
-      `${bus.angle.toFixed(4)}`
+      `${bus.angle.toFixed(4)}   ` +
+
+      `${bus.P_MW.toFixed(4)}   ` +
+
+      `${bus.Q_MVAR.toFixed(4)}`
 
     );
 
@@ -198,29 +239,29 @@ function printLoadFlowReport(report) {
 
 
 
-  if (report.lines) {
+
+  console.log("\nLINE LOSS RESULTS");
+
+  console.log("------------------------------");
 
 
-    console.log("\nLINE FLOWS");
-
-    console.log("------------------");
+  for (const line of report.lines) {
 
 
+    console.log(
 
-    for (const line of report.lines) {
+      `${line.from} -> ${line.to}  ` +
 
+      `P Loss=${line.P_loss_MW.toFixed(4)} MW  ` +
 
-      console.log(
+      `Q Loss=${line.Q_loss_MVAR.toFixed(4)} MVAR  ` +
 
-        `${line.from} -> ${line.to}  ` +
+      `S Loss=${line.loss_MVA.toFixed(4)} MVA`
 
-        `Loss=${line.P_loss.toFixed(6)}`
-
-      );
-
-    }
+    );
 
   }
+
 
 
 
@@ -229,7 +270,7 @@ function printLoadFlowReport(report) {
 
     console.log("\nVOLTAGE SUMMARY");
 
-    console.log("------------------");
+    console.log("------------------------------");
 
 
     console.log(
@@ -248,7 +289,6 @@ function printLoadFlowReport(report) {
       report.voltage.maximumVoltage.id
 
     );
-
 
   }
 

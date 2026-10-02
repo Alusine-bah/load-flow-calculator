@@ -29,6 +29,7 @@ require('./js/solver.js');
 require('./js/line-flow.js');
 
 require('./js/voltage-analysis.js');
+require('./js/units.js');
 
 require('./js/report.js');
 
