@@ -1,6 +1,10 @@
 // report.js
 // Engineering load flow report generator
-// Includes line flow and thermal loading analysis
+// Includes:
+// - Bus results
+// - Line flow
+// - Thermal loading
+// - Fault analysis
 
 
 function createLoadFlowReport(
@@ -8,7 +12,8 @@ function createLoadFlowReport(
   result,
   lineFlows = null,
   voltageReport = null,
-  lineRatings = null
+  lineRatings = null,
+  faultReport = null
 ) {
 
 
@@ -23,7 +28,7 @@ function createLoadFlowReport(
 
       name: system.name,
 
-      baseMVA: baseMVA,
+      baseMVA,
 
       numberOfBuses:
         system.buses.length,
@@ -58,7 +63,8 @@ function createLoadFlowReport(
 
         type: bus.type,
 
-        voltage: bus.V,
+        voltage:
+          bus.V,
 
         angle:
           bus.delta_deg,
@@ -114,7 +120,6 @@ function createLoadFlowReport(
           current_kA:
             line.current_kA
 
-
         }))
       : [],
 
@@ -123,6 +128,12 @@ function createLoadFlowReport(
     lineRatings:
 
       lineRatings || [],
+
+
+
+    fault:
+
+      faultReport || null,
 
 
 
@@ -308,6 +319,55 @@ function printLoadFlowReport(report) {
 
 
 
+  if (report.fault) {
+
+
+    console.log("\nFAULT ANALYSIS");
+
+    console.log("------------------------------");
+
+
+    console.log(
+      "Fault Bus:",
+      report.fault.bus
+    );
+
+
+    console.log(
+      "Pre-fault Voltage:",
+      C.abs(
+        report.fault.prefaultVoltage
+      ).toFixed(4),
+      "pu"
+    );
+
+
+    console.log(
+      "Fault Current:",
+      report.fault.faultCurrent_pu.toFixed(4),
+      "pu"
+    );
+
+
+    console.log(
+      "Fault MVA:",
+      report.fault.faultMVA.toFixed(2),
+      "MVA"
+    );
+
+
+    console.log(
+      "Fault Current:",
+      report.fault.faultCurrent_kA.toFixed(4),
+      "kA"
+    );
+
+  }
+
+
+
+
+
   if (report.voltage) {
 
 
@@ -328,7 +388,6 @@ function printLoadFlowReport(report) {
     );
 
   }
-
 
 }
 
