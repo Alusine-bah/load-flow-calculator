@@ -1,8 +1,17 @@
 // fault-analysis.js
-// Three phase short circuit fault analysis using Zbus
+// Fault analysis framework using Zbus
 //
-// Uses:
+// Current supported calculation:
+// Three Phase Fault
+//
+// Future:
+// Single Line to Ground
+// Line to Line
+// Double Line to Ground
+//
+// Equation:
 // If = Vprefault / (Zth + Zf)
+
 
 
 function calculateFaultCurrent(
@@ -59,10 +68,12 @@ function getPrefaultVoltage(
   }
 
 
+
   const bus =
     result.buses.find(
       b => b.id === faultBus
     );
+
 
 
   if (!bus) {
@@ -70,6 +81,7 @@ function getPrefaultVoltage(
     return C.make(1, 0);
 
   }
+
 
 
   return C.fromPolar(
@@ -105,18 +117,27 @@ function calculateFaultAnalysis(
 
 
 
+  const faultType =
+    options.faultType ||
+    "Three Phase";
+
+
+
   let prefaultVoltage;
 
 
 
   if (options.prefaultVoltage) {
 
+
     prefaultVoltage =
       options.prefaultVoltage;
+
 
   }
 
   else {
+
 
     prefaultVoltage =
       getPrefaultVoltage(
@@ -175,6 +196,9 @@ function calculateFaultAnalysis(
   return {
 
 
+    faultType,
+
+
     bus:
       faultBus,
 
@@ -211,12 +235,19 @@ function printFaultReport(result) {
 
 
   console.log(
-    "\nTHREE PHASE FAULT REPORT"
+    "\nFAULT ANALYSIS REPORT"
   );
 
 
   console.log(
     "------------------------------"
+  );
+
+
+
+  console.log(
+    "Fault Type:",
+    result.faultType
   );
 
 
@@ -269,6 +300,8 @@ function printFaultReport(result) {
   );
 
 }
+
+
 
 
 

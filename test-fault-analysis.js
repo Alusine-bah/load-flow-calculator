@@ -88,6 +88,7 @@ const fault =
     2,
     result,
     {
+      faultType: "Three Phase",
       faultImpedance: 0.05
     }
   );
