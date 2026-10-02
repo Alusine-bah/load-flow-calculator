@@ -29,6 +29,7 @@ require('./js/newton-v2.js');
 
 require('./js/solver.js');
 
+require('./js/units.js');
 
 require('./js/line-flow.js');
 
@@ -103,6 +104,26 @@ for (const f of flows) {
   );
 
 
+  console.log(
+    "Sending MVA:",
+    f.S_from_MVA.toFixed(4)
+  );
+
+
+  console.log(
+    "Current kA:",
+    f.current_kA.toFixed(4)
+  );
+
+
+  console.log(
+    "Loading %:",
+    f.loading_percent === null
+      ? "N/A"
+      : f.loading_percent.toFixed(2)
+  );
+
+
   console.log("----------------");
 
 }
@@ -133,7 +154,6 @@ console.log(
 
 // ======================================
 // Power balance validation
-// Use solved bus injections
 // ======================================
 
 let totalInjectedP = 0;

@@ -1,14 +1,13 @@
 // line-flow.js
-// Calculate transmission line power flow from LoadFlowResult
+// Transmission line power flow analysis
 //
 // Calculates:
-// - Sending end current
-// - Receiving end current
-// - Sending end power
-// - Receiving end power
-// - Line losses
-//
-// Uses π-model line parameters
+// - Current flow
+// - Sending/receiving power
+// - Losses
+// - MVA flow
+// - Current (kA)
+// - Loading percentage
 
 
 function calculateLineFlows(system, result) {
@@ -17,8 +16,27 @@ function calculateLineFlows(system, result) {
   const flows = [];
 
 
+  const baseMVA = system.baseMVA;
 
-  // Build voltage phasors from solved result
+
+
+  // Voltage base
+  // If system baseKV is unavailable,
+  // use line/bus baseKV
+
+
+  const voltageKV = {};
+
+  for (const bus of system.buses) {
+
+    voltageKV[bus.id] =
+      bus.baseKV || system.baseKV;
+
+  }
+
+
+
+  // Build voltage phasors
 
   const V = {};
 
@@ -34,8 +52,6 @@ function calculateLineFlows(system, result) {
 
 
 
-  // Process every line
-
   for (const line of system.lines) {
 
 
@@ -45,13 +61,10 @@ function calculateLineFlows(system, result) {
 
 
 
-    // Line impedance
-
     const Z = C.make(
       line.R,
       line.X
     );
-
 
 
     const ySeries = C.div(
@@ -60,9 +73,6 @@ function calculateLineFlows(system, result) {
     );
 
 
-
-    // π model shunt
-
     const yShunt = C.make(
       line.G,
       line.B / 2
@@ -70,7 +80,7 @@ function calculateLineFlows(system, result) {
 
 
 
-    // Current from sending bus to receiving bus
+    // Current from side
 
     const I_from = C.add(
 
@@ -88,7 +98,7 @@ function calculateLineFlows(system, result) {
 
 
 
-    // Current from receiving bus to sending bus
+    // Current to side
 
     const I_to = C.add(
 
@@ -106,24 +116,15 @@ function calculateLineFlows(system, result) {
 
 
 
-    // Complex power S = V * I*
-
     const S_from = C.mul(
-
       fromV,
-
       C.conj(I_from)
-
     );
 
 
-
     const S_to = C.mul(
-
       toV,
-
       C.conj(I_to)
-
     );
 
 
@@ -132,6 +133,43 @@ function calculateLineFlows(system, result) {
       S_from,
       S_to
     );
+
+
+
+    // Apparent power
+
+    const S_from_MVA =
+      calculateMVA(
+        S_from.re,
+        S_from.im,
+        baseMVA
+      );
+
+
+    const S_to_MVA =
+      calculateMVA(
+        S_to.re,
+        S_to.im,
+        baseMVA
+      );
+
+
+
+    // Current calculation
+
+    const currentKA =
+      calculateCurrentKA(
+        S_from_MVA,
+        voltageKV[line.from]
+      );
+
+
+
+    const loading =
+      calculateLoadingPercent(
+        S_from_MVA,
+        line.ratingMVA
+      );
 
 
 
@@ -159,9 +197,21 @@ function calculateLineFlows(system, result) {
 
       P_loss: loss.re,
 
-      Q_loss: loss.im
+      Q_loss: loss.im,
+
+
+      S_from_MVA,
+
+      S_to_MVA,
+
+
+      current_kA: currentKA,
+
+
+      loading_percent: loading
 
     });
+
 
   }
 
@@ -173,4 +223,5 @@ function calculateLineFlows(system, result) {
 
 
 
-window.calculateLineFlows = calculateLineFlows;
+window.calculateLineFlows =
+  calculateLineFlows;
