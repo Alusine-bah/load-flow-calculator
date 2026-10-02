@@ -1,19 +1,22 @@
 // report.js
 // Engineering load flow report generator
+// Includes line flow and thermal loading analysis
 
 
 function createLoadFlowReport(
   system,
   result,
   lineFlows = null,
-  voltageReport = null
+  voltageReport = null,
+  lineRatings = null
 ) {
 
 
   const baseMVA = system.baseMVA;
 
 
-  const report = {
+
+  return {
 
 
     system: {
@@ -55,8 +58,7 @@ function createLoadFlowReport(
 
         type: bus.type,
 
-        voltage:
-          bus.V,
+        voltage: bus.V,
 
         angle:
           bus.delta_deg,
@@ -82,54 +84,45 @@ function createLoadFlowReport(
     lines:
 
       lineFlows
-        ? lineFlows.map(line => ({
+      ? lineFlows.map(line => ({
+
+          from:
+            line.from,
+
+          to:
+            line.to,
 
 
-            from:
-              line.from,
+          P_loss_MW:
+            puToMW(
+              line.P_loss,
+              baseMVA
+            ),
 
 
-            to:
-              line.to,
+          Q_loss_MVAR:
+            puToMVAR(
+              line.Q_loss,
+              baseMVA
+            ),
 
 
-            P_loss_MW:
-              puToMW(
-                line.P_loss,
-                baseMVA
-              ),
+          flow_MVA:
+            line.S_from_MVA,
 
 
-            Q_loss_MVAR:
-              puToMVAR(
-                line.Q_loss,
-                baseMVA
-              ),
+          current_kA:
+            line.current_kA
 
 
-            loss_MVA:
-              calculateMVA(
-                line.P_loss,
-                line.Q_loss,
-                baseMVA
-              ),
+        }))
+      : [],
 
 
-            flow_MVA:
-              line.S_from_MVA,
 
+    lineRatings:
 
-            current_kA:
-              line.current_kA,
-
-
-            loading_percent:
-              line.loading_percent
-
-
-          }))
-
-        : [],
+      lineRatings || [],
 
 
 
@@ -138,9 +131,6 @@ function createLoadFlowReport(
       voltageReport || null
 
   };
-
-
-  return report;
 
 }
 
@@ -151,9 +141,14 @@ function createLoadFlowReport(
 function printLoadFlowReport(report) {
 
 
-  console.log("\nPOWER FLOW ENGINEERING REPORT");
 
-  console.log("==============================\n");
+  console.log(
+    "\nPOWER FLOW ENGINEERING REPORT"
+  );
+
+  console.log(
+    "==============================\n"
+  );
 
 
 
@@ -188,6 +183,7 @@ function printLoadFlowReport(report) {
 
 
 
+
   console.log("\nSOLVER");
 
   console.log("------------------------------");
@@ -213,6 +209,7 @@ function printLoadFlowReport(report) {
 
 
 
+
   console.log("\nBUS VOLTAGE RESULTS");
 
   console.log("------------------------------");
@@ -230,18 +227,15 @@ function printLoadFlowReport(report) {
     console.log(
 
       `${bus.id}     ` +
-
       `${bus.voltage.toFixed(4)}   ` +
-
       `${bus.angle.toFixed(4)}   ` +
-
       `${bus.P_MW.toFixed(4)}   ` +
-
       `${bus.Q_MVAR.toFixed(4)}`
 
     );
 
   }
+
 
 
 
@@ -252,7 +246,7 @@ function printLoadFlowReport(report) {
 
 
   console.log(
-    "Line    Loss(MW)   Loss(MVAR)   Flow(MVA)   Current(kA)   Loading"
+    "Line   Loss(MW)   Loss(MVAR)   Flow(MVA)   Current(kA)"
   );
 
 
@@ -262,25 +256,54 @@ function printLoadFlowReport(report) {
 
     console.log(
 
-      `${line.from}-${line.to}    ` +
-
+      `${line.from}-${line.to}   ` +
       `${line.P_loss_MW.toFixed(4)}      ` +
-
       `${line.Q_loss_MVAR.toFixed(4)}      ` +
-
       `${line.flow_MVA.toFixed(4)}      ` +
+      `${line.current_kA.toFixed(4)}`
 
-      `${line.current_kA.toFixed(4)}      ` +
+    );
+
+  }
+
+
+
+
+
+  console.log("\nLINE THERMAL LOADING");
+
+  console.log("------------------------------");
+
+
+  console.log(
+    "Line   Flow(MVA)   Rating(MVA)   Loading   Status"
+  );
+
+
+
+  for (const line of report.lineRatings) {
+
+
+    console.log(
+
+      `${line.from}-${line.to}   ` +
+
+      `${line.flow_MVA.toFixed(2)}        ` +
+
+      `${line.rating_MVA || "N/A"}          ` +
 
       `${
         line.loading_percent === null
         ? "N/A"
         : line.loading_percent.toFixed(2) + "%"
-      }`
+      }     ` +
+
+      `${line.status}`
 
     );
 
   }
+
 
 
 

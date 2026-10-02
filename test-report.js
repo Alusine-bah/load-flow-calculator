@@ -30,7 +30,7 @@ require('./js/line-flow.js');
 
 require('./js/voltage-analysis.js');
 require('./js/units.js');
-
+require('./js/line-rating.js');
 require('./js/report.js');
 
 
@@ -54,7 +54,17 @@ const lineFlows =
     result
   );
 
+system.lines[0].ratingMVA = 100;
+system.lines[1].ratingMVA = 80;
+system.lines[2].ratingMVA = 50;
+system.lines[3].ratingMVA = 20;
 
+
+const lineRatings =
+  analyzeLineRatings(
+    system,
+    lineFlows
+  );
 
 const voltageReport =
   analyzeVoltageProfile(
@@ -68,9 +78,9 @@ const report =
     system,
     result,
     lineFlows,
-    voltageReport
+    voltageReport,
+    lineRatings
   );
-
 
 
 printLoadFlowReport(report);
