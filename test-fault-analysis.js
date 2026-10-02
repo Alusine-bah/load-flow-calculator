@@ -86,9 +86,11 @@ const fault =
     system,
     zbus,
     2,
-    result
+    result,
+    {
+      faultImpedance: 0.05
+    }
   );
-
 
 printFaultReport(fault);
 

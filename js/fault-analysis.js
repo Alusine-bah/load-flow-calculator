@@ -17,13 +17,11 @@ function calculateFaultCurrent(
     zbus[faultBus][faultBus];
 
 
-
   const Zf =
     C.make(
       faultImpedance,
       0
     );
-
 
 
   const denominator =
@@ -33,13 +31,11 @@ function calculateFaultCurrent(
     );
 
 
-
   const Ifault =
     C.div(
       prefaultVoltage,
       denominator
     );
-
 
 
   return Ifault;
@@ -63,12 +59,10 @@ function getPrefaultVoltage(
   }
 
 
-
   const bus =
     result.buses.find(
       b => b.id === faultBus
     );
-
 
 
   if (!bus) {
@@ -76,7 +70,6 @@ function getPrefaultVoltage(
     return C.make(1, 0);
 
   }
-
 
 
   return C.fromPolar(
@@ -107,7 +100,6 @@ function calculateFaultAnalysis(
     system.baseMVA;
 
 
-
   const baseKV =
     system.baseKV;
 
@@ -119,15 +111,12 @@ function calculateFaultAnalysis(
 
   if (options.prefaultVoltage) {
 
-
     prefaultVoltage =
       options.prefaultVoltage;
-
 
   }
 
   else {
-
 
     prefaultVoltage =
       getPrefaultVoltage(
@@ -190,6 +179,9 @@ function calculateFaultAnalysis(
       faultBus,
 
 
+    faultImpedance,
+
+
     prefaultVoltage,
 
 
@@ -232,6 +224,14 @@ function printFaultReport(result) {
   console.log(
     "Fault Bus:",
     result.bus
+  );
+
+
+
+  console.log(
+    "Fault Impedance:",
+    result.faultImpedance.toFixed(4),
+    "pu"
   );
 
 
