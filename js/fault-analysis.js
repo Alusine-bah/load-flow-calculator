@@ -1,17 +1,14 @@
 // fault-analysis.js
 // Three phase short circuit fault analysis using Zbus
 //
-// Calculates:
-// - Fault current in pu
-// - Fault current in kA
-// - Fault MVA
-// - Bus voltage during fault
+// Uses:
+// If = Vprefault / (Zth + Zf)
 
 
 function calculateFaultCurrent(
   zbus,
   faultBus,
-  prefaultVoltage = 1,
+  prefaultVoltage = C.make(1, 0),
   faultImpedance = 0
 ) {
 
@@ -21,23 +18,25 @@ function calculateFaultCurrent(
 
 
 
+  const Zf =
+    C.make(
+      faultImpedance,
+      0
+    );
+
+
+
   const denominator =
     C.add(
       Zth,
-      C.make(
-        faultImpedance,
-        0
-      )
+      Zf
     );
 
 
 
   const Ifault =
     C.div(
-      C.make(
-        prefaultVoltage,
-        0
-      ),
+      prefaultVoltage,
       denominator
     );
 
@@ -51,10 +50,55 @@ function calculateFaultCurrent(
 
 
 
+function getPrefaultVoltage(
+  result,
+  faultBus
+) {
+
+
+  if (!result || !result.buses) {
+
+    return C.make(1, 0);
+
+  }
+
+
+
+  const bus =
+    result.buses.find(
+      b => b.id === faultBus
+    );
+
+
+
+  if (!bus) {
+
+    return C.make(1, 0);
+
+  }
+
+
+
+  return C.fromPolar(
+
+    bus.V,
+
+    bus.delta_deg *
+    Math.PI / 180
+
+  );
+
+}
+
+
+
+
+
 function calculateFaultAnalysis(
   system,
   zbus,
   faultBus,
+  loadFlowResult = null,
   options = {}
 ) {
 
@@ -69,8 +113,29 @@ function calculateFaultAnalysis(
 
 
 
-  const prefaultVoltage =
-    options.prefaultVoltage || 1;
+  let prefaultVoltage;
+
+
+
+  if (options.prefaultVoltage) {
+
+
+    prefaultVoltage =
+      options.prefaultVoltage;
+
+
+  }
+
+  else {
+
+
+    prefaultVoltage =
+      getPrefaultVoltage(
+        loadFlowResult,
+        faultBus
+      );
+
+  }
 
 
 
@@ -81,10 +146,15 @@ function calculateFaultAnalysis(
 
   const Ifault =
     calculateFaultCurrent(
+
       zbus,
+
       faultBus,
+
       prefaultVoltage,
+
       faultImpedance
+
     );
 
 
@@ -104,8 +174,11 @@ function calculateFaultAnalysis(
 
   const currentKA =
     calculateCurrentKA(
+
       faultMVA,
+
       baseKV
+
     );
 
 
@@ -155,17 +228,22 @@ function printFaultReport(result) {
   );
 
 
+
   console.log(
     "Fault Bus:",
     result.bus
   );
 
 
+
   console.log(
     "Pre-fault Voltage:",
-    result.prefaultVoltage.toFixed(4),
+    C.abs(
+      result.prefaultVoltage
+    ).toFixed(4),
     "pu"
   );
+
 
 
   console.log(
@@ -175,11 +253,13 @@ function printFaultReport(result) {
   );
 
 
+
   console.log(
     "Fault MVA:",
     result.faultMVA.toFixed(2),
     "MVA"
   );
+
 
 
   console.log(
