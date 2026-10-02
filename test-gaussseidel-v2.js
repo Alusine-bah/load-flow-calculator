@@ -1,31 +1,83 @@
 // test-gaussseidel-v2.js
 // Validate Gauss-Seidel through PowerSystem V2 adapter
 
+
 global.window = global;
 
+
+// ======================================
+// Load dependencies in correct order
+// ======================================
+
+
+// Complex engine
 require('./js/complex.js');
+
+
+// Old system data
 require('./js/data.js');
+
+
+// V2 model
 require('./js/models.js');
+
 require('./js/system-loader-v2.js');
 
+
+// Old Gauss-Seidel dependencies
 require('./js/ybus.js');
+
 require('./js/gaussseidel.js');
+
+
+// V2 dependencies
+require('./js/ybus-v2.js');
+
+require('./js/results.js');
+
 require('./js/gaussseidel-v2.js');
 
 
+
+// ======================================
+// Compare V2 GS with old GS
+// ======================================
+
 function compare(name) {
+
 
   console.log(`\n===== ${name} =====`);
 
+
+
+  // Load V2 system
+
   const v2System = loadSystemV2(name);
 
-  const resultV2 = solveGaussSeidelV2(v2System);
 
 
-  const oldSystem = cloneSystem(SYSTEMS[name]);
+  // Run V2 adapter
+
+  const resultV2 = solveGaussSeidelV2(
+    v2System
+  );
+
+
+
+  // Run old solver
+
+  const oldSystem = cloneSystem(
+    SYSTEMS[name]
+  );
+
+
   oldSystem.maxIter = 2000;
 
-  const resultOld = solveGaussSeidel(oldSystem);
+
+  const resultOld = solveGaussSeidel(
+    oldSystem
+  );
+
 
 
   console.log(
@@ -33,33 +85,64 @@ function compare(name) {
     resultV2.converged
   );
 
+
   console.log(
     "Old converged:",
     resultOld.converged
   );
 
 
+
   let maxDV = 0;
+
   let maxDA = 0;
 
 
-  for (let i = 0; i < resultV2.busResults.length; i++) {
+
+  // Compare voltage and angle
+
+  for (
+    let i = 0;
+    i < resultV2.buses.length;
+    i++
+  ) {
+
+
+    const v2Bus = resultV2.buses[i];
+
+    const oldBus = resultOld.busResults[i];
+
+
 
     const dV = Math.abs(
-      resultV2.busResults[i].V -
-      resultOld.busResults[i].V
+      v2Bus.V -
+      oldBus.V
     );
+
 
 
     const dA = Math.abs(
-      resultV2.busResults[i].delta_deg -
-      resultOld.busResults[i].delta_deg
+      v2Bus.delta_deg -
+      oldBus.delta_deg
     );
 
 
-    if (dV > maxDV) maxDV = dV;
-    if (dA > maxDA) maxDA = dA;
+
+    if (dV > maxDV) {
+
+      maxDV = dV;
+
+    }
+
+
+    if (dA > maxDA) {
+
+      maxDA = dA;
+
+    }
+
   }
+
 
 
   console.log(
@@ -74,14 +157,45 @@ function compare(name) {
   );
 
 
+
+  const pass =
+    maxDV < 1e-10 &&
+    maxDA < 1e-6;
+
+
+
   console.log(
-    maxDV < 1e-10 && maxDA < 1e-6
+
+    pass
+
       ? "PASS: V2 GS matches old solver"
+
       : "FAIL: mismatch"
+
   );
+
+
+
+  return pass;
+
 }
 
 
-compare("4bus");
-compare("5bus");
-compare("9bus");
+
+// ======================================
+// Run tests
+// ======================================
+
+const ok4 = compare("4bus");
+
+const ok5 = compare("5bus");
+
+const ok9 = compare("9bus");
+
+
+
+process.exit(
+  ok4 && ok5 && ok9
+    ? 0
+    : 1
+);
