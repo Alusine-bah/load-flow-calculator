@@ -1,10 +1,11 @@
 // report.js
-// Engineering load flow report generator
+// Engineering report generator
 // Includes:
-// - Bus results
+// - Load flow results
 // - Line flow
 // - Thermal loading
 // - Fault analysis
+// - Fault studies
 
 
 function createLoadFlowReport(
@@ -13,11 +14,14 @@ function createLoadFlowReport(
   lineFlows = null,
   voltageReport = null,
   lineRatings = null,
-  faultReport = null
+  faultReport = null,
+  faultLocationStudy = null,
+  faultSeverityStudy = null
 ) {
 
 
-  const baseMVA = system.baseMVA;
+  const baseMVA =
+    system.baseMVA;
 
 
 
@@ -26,7 +30,8 @@ function createLoadFlowReport(
 
     system: {
 
-      name: system.name,
+      name:
+        system.name,
 
       baseMVA,
 
@@ -59,9 +64,11 @@ function createLoadFlowReport(
 
       result.buses.map(bus => ({
 
-        id: bus.id,
+        id:
+          bus.id,
 
-        type: bus.type,
+        type:
+          bus.type,
 
         voltage:
           bus.V,
@@ -90,55 +97,60 @@ function createLoadFlowReport(
     lines:
 
       lineFlows
-      ? lineFlows.map(line => ({
+      ?
+      lineFlows.map(line => ({
 
-          from:
-            line.from,
+        from:
+          line.from,
 
-          to:
-            line.to,
+        to:
+          line.to,
 
+        P_loss_MW:
+          puToMW(
+            line.P_loss,
+            baseMVA
+          ),
 
-          P_loss_MW:
-            puToMW(
-              line.P_loss,
-              baseMVA
-            ),
+        Q_loss_MVAR:
+          puToMVAR(
+            line.Q_loss,
+            baseMVA
+          ),
 
+        flow_MVA:
+          line.S_from_MVA,
 
-          Q_loss_MVAR:
-            puToMVAR(
-              line.Q_loss,
-              baseMVA
-            ),
+        current_kA:
+          line.current_kA
 
-
-          flow_MVA:
-            line.S_from_MVA,
-
-
-          current_kA:
-            line.current_kA
-
-        }))
-      : [],
+      }))
+      :
+      [],
 
 
 
     lineRatings:
-
       lineRatings || [],
 
 
 
     fault:
-
       faultReport || null,
 
 
 
-    voltage:
+    faultLocation:
+      faultLocationStudy || [],
 
+
+
+    faultSeverity:
+      faultSeverityStudy || [],
+
+
+
+    voltage:
       voltageReport || null
 
   };
@@ -152,18 +164,17 @@ function createLoadFlowReport(
 function printLoadFlowReport(report) {
 
 
-
   console.log(
     "\nPOWER FLOW ENGINEERING REPORT"
   );
 
   console.log(
-    "==============================\n"
+    "=============================="
   );
 
 
 
-  console.log("SYSTEM");
+  console.log("\nSYSTEM");
 
   console.log("------------------------------");
 
@@ -221,96 +232,17 @@ function printLoadFlowReport(report) {
 
 
 
-  console.log("\nBUS VOLTAGE RESULTS");
-
-  console.log("------------------------------");
-
-
-  console.log(
-    "Bus   V(pu)   Angle(deg)   P(MW)     Q(MVAR)"
-  );
-
-
-
-  for (const bus of report.buses) {
-
-
-    console.log(
-
-      `${bus.id}     ` +
-      `${bus.voltage.toFixed(4)}   ` +
-      `${bus.angle.toFixed(4)}   ` +
-      `${bus.P_MW.toFixed(4)}   ` +
-      `${bus.Q_MVAR.toFixed(4)}`
-
-    );
-
-  }
-
-
-
-
-
-  console.log("\nLINE FLOW DETAILS");
-
-  console.log("------------------------------");
-
-
-  console.log(
-    "Line   Loss(MW)   Loss(MVAR)   Flow(MVA)   Current(kA)"
-  );
-
-
-
-  for (const line of report.lines) {
-
-
-    console.log(
-
-      `${line.from}-${line.to}   ` +
-      `${line.P_loss_MW.toFixed(4)}      ` +
-      `${line.Q_loss_MVAR.toFixed(4)}      ` +
-      `${line.flow_MVA.toFixed(4)}      ` +
-      `${line.current_kA.toFixed(4)}`
-
-    );
-
-  }
-
-
-
-
-
   console.log("\nLINE THERMAL LOADING");
 
   console.log("------------------------------");
 
 
-  console.log(
-    "Line   Flow(MVA)   Rating(MVA)   Loading   Status"
-  );
-
-
-
   for (const line of report.lineRatings) {
 
-
     console.log(
-
-      `${line.from}-${line.to}   ` +
-
-      `${line.flow_MVA.toFixed(2)}        ` +
-
-      `${line.rating_MVA || "N/A"}          ` +
-
-      `${
-        line.loading_percent === null
-        ? "N/A"
-        : line.loading_percent.toFixed(2) + "%"
-      }     ` +
-
+      `${line.from}-${line.to}  ` +
+      `${line.loading_percent.toFixed(2)}%  ` +
       `${line.status}`
-
     );
 
   }
@@ -328,17 +260,14 @@ function printLoadFlowReport(report) {
 
 
     console.log(
-      "Fault Bus:",
-      report.fault.bus
+      "Fault Type:",
+      report.fault.faultType
     );
 
 
     console.log(
-      "Pre-fault Voltage:",
-      C.abs(
-        report.fault.prefaultVoltage
-      ).toFixed(4),
-      "pu"
+      "Fault Bus:",
+      report.fault.bus
     );
 
 
@@ -355,12 +284,40 @@ function printLoadFlowReport(report) {
       "MVA"
     );
 
+  }
+
+
+
+
+
+  if (report.faultLocation.length) {
+
+
+    console.log("\nFAULT LOCATION STUDY");
+
+    console.log("------------------------------");
+
 
     console.log(
-      "Fault Current:",
-      report.fault.faultCurrent_kA.toFixed(4),
-      "kA"
+      "Bus   Fault MVA   Current(kA)"
     );
+
+
+
+    for (const f of report.faultLocation) {
+
+
+      console.log(
+
+        `${f.bus}     ` +
+
+        `${f.faultMVA.toFixed(2)}       ` +
+
+        `${f.faultCurrent_kA.toFixed(4)}`
+
+      );
+
+    }
 
   }
 
@@ -368,24 +325,34 @@ function printLoadFlowReport(report) {
 
 
 
-  if (report.voltage) {
+  if (report.faultSeverity.length) {
 
 
-    console.log("\nVOLTAGE SUMMARY");
+    console.log("\nFAULT SEVERITY STUDY");
 
     console.log("------------------------------");
 
 
     console.log(
-      "Minimum Voltage Bus:",
-      report.voltage.minimumVoltage.id
+      "Zf(pu)   Fault MVA   Current(kA)"
     );
 
 
-    console.log(
-      "Maximum Voltage Bus:",
-      report.voltage.maximumVoltage.id
-    );
+
+    for (const f of report.faultSeverity) {
+
+
+      console.log(
+
+        `${f.faultImpedance.toFixed(4)}     ` +
+
+        `${f.faultMVA.toFixed(2)}       ` +
+
+        `${f.faultCurrent_kA.toFixed(4)}`
+
+      );
+
+    }
 
   }
 

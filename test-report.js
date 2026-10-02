@@ -1,5 +1,5 @@
 // test-report.js
-// Test complete load flow report with fault analysis
+// Test complete load flow report with fault analysis and fault studies
 
 
 global.window = global;
@@ -53,6 +53,10 @@ require('./js/voltage-analysis.js');
 require('./js/line-rating.js');
 
 require('./js/fault-analysis.js');
+
+require('./js/fault-study.js');
+
+require('./js/fault-location-study.js');
 
 
 // Report
@@ -151,7 +155,61 @@ const faultReport =
     system,
     zbus,
     2,
-    result
+    result,
+    {
+      faultType: "Three Phase",
+      faultImpedance: 0.05
+    }
+  );
+
+
+
+
+// ======================================
+// Fault location study
+// ======================================
+
+const faultLocationStudy =
+  runFaultLocationStudy(
+
+    system,
+
+    zbus,
+
+    result,
+
+    {
+      faultType: "Three Phase",
+      faultImpedance: 0.05
+    }
+
+  );
+
+
+
+
+// ======================================
+// Fault severity study
+// ======================================
+
+const faultSeverityStudy =
+  runFaultSeverityStudy(
+
+    system,
+
+    zbus,
+
+    2,
+
+    result,
+
+    [
+      0,
+      0.05,
+      0.10,
+      0.20
+    ]
+
   );
 
 
@@ -174,7 +232,11 @@ const report =
 
     lineRatings,
 
-    faultReport
+    faultReport,
+
+    faultLocationStudy,
+
+    faultSeverityStudy
 
   );
 
