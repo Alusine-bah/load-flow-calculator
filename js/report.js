@@ -1,5 +1,5 @@
 // report.js
-// Engineering load flow report generator with real units
+// Engineering load flow report generator
 
 
 function createLoadFlowReport(
@@ -11,7 +11,6 @@ function createLoadFlowReport(
 
 
   const baseMVA = system.baseMVA;
-
 
 
   const report = {
@@ -56,16 +55,11 @@ function createLoadFlowReport(
 
         type: bus.type,
 
-        voltage: bus.V,
+        voltage:
+          bus.V,
 
         angle:
           bus.delta_deg,
-
-        P_pu:
-          bus.P_calc,
-
-        Q_pu:
-          bus.Q_calc,
 
 
         P_MW:
@@ -118,7 +112,19 @@ function createLoadFlowReport(
                 line.P_loss,
                 line.Q_loss,
                 baseMVA
-              )
+              ),
+
+
+            flow_MVA:
+              line.S_from_MVA,
+
+
+            current_kA:
+              line.current_kA,
+
+
+            loading_percent:
+              line.loading_percent
 
 
           }))
@@ -132,7 +138,6 @@ function createLoadFlowReport(
       voltageReport || null
 
   };
-
 
 
   return report;
@@ -155,6 +160,7 @@ function printLoadFlowReport(report) {
   console.log("SYSTEM");
 
   console.log("------------------------------");
+
 
   console.log(
     "Name:",
@@ -240,9 +246,15 @@ function printLoadFlowReport(report) {
 
 
 
-  console.log("\nLINE LOSS RESULTS");
+  console.log("\nLINE FLOW DETAILS");
 
   console.log("------------------------------");
+
+
+  console.log(
+    "Line    Loss(MW)   Loss(MVAR)   Flow(MVA)   Current(kA)   Loading"
+  );
+
 
 
   for (const line of report.lines) {
@@ -250,13 +262,21 @@ function printLoadFlowReport(report) {
 
     console.log(
 
-      `${line.from} -> ${line.to}  ` +
+      `${line.from}-${line.to}    ` +
 
-      `P Loss=${line.P_loss_MW.toFixed(4)} MW  ` +
+      `${line.P_loss_MW.toFixed(4)}      ` +
 
-      `Q Loss=${line.Q_loss_MVAR.toFixed(4)} MVAR  ` +
+      `${line.Q_loss_MVAR.toFixed(4)}      ` +
 
-      `S Loss=${line.loss_MVA.toFixed(4)} MVA`
+      `${line.flow_MVA.toFixed(4)}      ` +
+
+      `${line.current_kA.toFixed(4)}      ` +
+
+      `${
+        line.loading_percent === null
+        ? "N/A"
+        : line.loading_percent.toFixed(2) + "%"
+      }`
 
     );
 
@@ -274,20 +294,14 @@ function printLoadFlowReport(report) {
 
 
     console.log(
-
       "Minimum Voltage Bus:",
-
       report.voltage.minimumVoltage.id
-
     );
 
 
     console.log(
-
       "Maximum Voltage Bus:",
-
       report.voltage.maximumVoltage.id
-
     );
 
   }
