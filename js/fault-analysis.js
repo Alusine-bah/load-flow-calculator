@@ -13,6 +13,7 @@
 // If = Vprefault / (Zth + Zf)
 
 
+
 function getZbusIndex(
   system,
   faultBus
@@ -53,11 +54,53 @@ function getZbusIndex(
 
 
 
+// Get voltage level of faulted bus
+// Fallback to system baseKV
+
+function getFaultBusKV(
+  system,
+  faultBus
+) {
+
+
+  const bus =
+    system.buses.find(
+      b =>
+        b.id === faultBus
+    );
+
+
+  if (!bus) {
+
+    throw new Error(
+      "Fault bus voltage data unavailable."
+    );
+
+  }
+
+
+
+  return (
+
+    bus.baseKV ||
+
+    system.baseKV ||
+
+    1
+
+  );
+
+}
+
+
+
+
+
 function calculateFaultCurrent(
   zbus,
   system,
   faultBus,
-  prefaultVoltage = C.make(1, 0),
+  prefaultVoltage = C.make(1,0),
   faultImpedance = 0
 ) {
 
@@ -105,14 +148,10 @@ function calculateFaultCurrent(
 
 
 
-  const Ifault =
-    C.div(
-      prefaultVoltage,
-      denominator
-    );
-
-
-  return Ifault;
+  return C.div(
+    prefaultVoltage,
+    denominator
+  );
 
 }
 
@@ -186,8 +225,12 @@ function calculateFaultAnalysis(
     system.baseMVA;
 
 
-  const baseKV =
-    system.baseKV;
+
+  const faultKV =
+    getFaultBusKV(
+      system,
+      faultBus
+    );
 
 
 
@@ -262,7 +305,7 @@ function calculateFaultAnalysis(
 
       faultMVA,
 
-      baseKV
+      faultKV
 
     );
 
@@ -270,12 +313,14 @@ function calculateFaultAnalysis(
 
   return {
 
-
     faultType,
 
 
     bus:
       faultBus,
+
+
+    faultKV,
 
 
     faultImpedance,
@@ -330,6 +375,13 @@ function printFaultReport(
   console.log(
     "Fault Bus:",
     result.bus
+  );
+
+
+  console.log(
+    "Fault Voltage:",
+    result.faultKV,
+    "kV"
   );
 
 
