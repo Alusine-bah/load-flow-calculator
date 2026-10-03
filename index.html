@@ -1,105 +1,437 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Load Flow Calculator</title>
-<link rel="stylesheet" href="css/style.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Power Flow Engineering Calculator</title>
+
+  <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
 
-<header class="site-header">
-  <h1>Load Flow Calculator</h1>
-  <p class="subtitle">
-    Enter bus and line data, pick a solver, and get the converged voltages.
-    Values are in per unit on the system MVA base.
-  </p>
-</header>
+  <!-- ========================================================= -->
+  <!-- Header -->
+  <!-- ========================================================= -->
 
-<main>
+  <header class="site-header">
 
-  <section class="controls">
-    <label for="base-mva">Base MVA:</label>
-    <input type="number" id="base-mva" value="100" step="1" min="0.001" />
+    <h1>Power Flow Engineering Calculator</h1>
 
-    <label for="method-select">Method:</label>
-    <select id="method-select">
-      <option value="newton">Newton–Raphson</option>
-      <option value="gs">Gauss–Seidel</option>
-    </select>
+    <p class="subtitle">
+      Interactive browser-based power system analysis using
+      Newton–Raphson and Gauss–Seidel methods.
+      Enter bus and transmission-line data to calculate
+      voltages, power injections, line flows, loading,
+      fault studies, and contingency analysis.
+    </p>
 
-    <button id="solve-btn">Solve</button>
-  </section>
+  </header>
 
-  <section class="data-section">
-    <h2>Bus Data</h2>
-    <table class="input-table" id="bus-table">
-      <thead>
-        <tr>
-          <th>id</th>
-          <th>type</th>
-          <th>V (p.u.)</th>
-          <th>θ (°)</th>
-          <th>Pgen (p.u.)</th>
-          <th>Qgen (p.u.)</th>
-          <th>Pload (p.u.)</th>
-          <th>Qload (p.u.)</th>
-        </tr>
-      </thead>
-      <tbody id="bus-tbody"></tbody>
-    </table>
-  </section>
 
-  <section class="data-section">
-    <h2>Line Data</h2>
-    <table class="input-table" id="line-table">
-      <thead>
-        <tr>
-          <th>from</th>
-          <th>to</th>
-          <th>R (p.u.)</th>
-          <th>X (p.u.)</th>
-          <th>B (p.u.)</th>
-        </tr>
-      </thead>
-      <tbody id="line-tbody"></tbody>
-    </table>
-  </section>
+  <main>
 
-  <section id="output" class="output">
-    <p class="hint">Enter data and click <strong>Solve</strong>.</p>
-  </section>
 
-</main>
+    <!-- ======================================================= -->
+    <!-- Main Solver Controls -->
+    <!-- ======================================================= -->
 
-<!-- Core utilities and example data -->
-<script src="js/complex.js"></script>
-<script src="js/data.js"></script>
+    <section class="controls">
 
-<!-- V2 power-system models -->
-<script src="js/models.js"></script>
-<script src="js/system-loader-v2.js"></script>
+      <label for="base-mva">
+        Base MVA:
+      </label>
 
-<!-- Network -->
-<script src="js/ybus.js"></script>
-<script src="js/ybus-v2.js"></script>
+      <input
+        type="number"
+        id="base-mva"
+        value="100"
+        step="1"
+        min="0.001"
+      />
 
-<!-- Common result model -->
-<script src="js/results.js"></script>
 
-<!-- Original solvers -->
-<script src="js/newton.js"></script>
-<script src="js/gaussseidel.js"></script>
+      <label for="method-select">
+        Method:
+      </label>
 
-<!-- V2 solver adapters -->
-<script src="js/newton-v2.js"></script>
-<script src="js/gaussseidel-v2.js"></script>
+      <select id="method-select">
 
-<!-- Unified V2 solver -->
-<script src="js/solver.js"></script>
+        <option value="newton">
+          Newton–Raphson
+        </option>
 
-<!-- Existing browser interface -->
-<script src="js/main.js"></script>
+        <option value="gs">
+          Gauss–Seidel
+        </option>
+
+      </select>
+
+
+      <button id="solve-btn">
+        Solve Power Flow
+      </button>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Bus Data -->
+    <!-- ======================================================= -->
+
+    <section class="data-section">
+
+      <h2>Bus Data</h2>
+
+      <table
+        class="input-table"
+        id="bus-table"
+      >
+
+        <thead>
+
+          <tr>
+
+            <th>id</th>
+
+            <th>type</th>
+
+            <th>V (p.u.)</th>
+
+            <th>θ (°)</th>
+
+            <th>Pgen (p.u.)</th>
+
+            <th>Qgen (p.u.)</th>
+
+            <th>Pload (p.u.)</th>
+
+            <th>Qload (p.u.)</th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody id="bus-tbody"></tbody>
+
+      </table>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Line Data -->
+    <!-- ======================================================= -->
+
+    <section class="data-section">
+
+      <h2>Line Data</h2>
+
+      <table
+        class="input-table"
+        id="line-table"
+      >
+
+        <thead>
+
+         <tr>
+  <th>from</th>
+  <th>to</th>
+  <th>R (p.u.)</th>
+  <th>X (p.u.)</th>
+  <th>B (p.u.)</th>
+  <th>Rating (MVA)</th>
+</tr>
+
+        </thead>
+
+
+        <tbody id="line-tbody"></tbody>
+
+      </table>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Power Flow Results -->
+    <!-- ======================================================= -->
+
+    <section
+      id="output"
+      class="output"
+    >
+
+      <p class="hint">
+        Enter data and click
+        <strong>Solve Power Flow</strong>.
+      </p>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Voltage Profile -->
+    <!-- ======================================================= -->
+
+    <section
+      id="voltage-analysis-section"
+      class="output analysis-section"
+    >
+
+      <h2>Voltage Profile</h2>
+
+      <div id="voltage-output">
+
+        <p class="hint">
+          Voltage analysis will appear after solving the system.
+        </p>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Line Flow -->
+    <!-- ======================================================= -->
+
+    <section
+      id="line-flow-section"
+      class="output analysis-section"
+    >
+
+      <h2>Transmission Line Flow</h2>
+
+      <div id="line-flow-output">
+
+        <p class="hint">
+          Line-flow results will appear after solving the system.
+        </p>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Thermal Loading -->
+    <!-- ======================================================= -->
+
+    <section
+      id="thermal-section"
+      class="output analysis-section"
+    >
+
+      <h2>Line Thermal Loading</h2>
+
+      <div id="thermal-output">
+
+        <p class="hint">
+          Thermal loading information will appear here.
+        </p>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Fault Analysis -->
+    <!-- ======================================================= -->
+
+    <section
+      id="fault-section"
+      class="output analysis-section"
+    >
+
+      <h2>Fault Analysis</h2>
+
+      <div id="fault-output">
+
+        <p class="hint">
+          Three-phase fault analysis controls and results
+          will appear here.
+        </p>
+
+      </div>
+
+    </section>
+
+
+
+    <!-- ======================================================= -->
+    <!-- Contingency Analysis -->
+    <!-- ======================================================= -->
+
+    <section
+      id="contingency-section"
+      class="output analysis-section"
+    >
+
+      <h2>N-1 Contingency Analysis</h2>
+
+      <div id="contingency-output">
+
+        <p class="hint">
+          Contingency ranking and security assessment
+          will appear here.
+        </p>
+
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Core -->
+  <!-- ========================================================= -->
+
+  <script src="js/complex.js"></script>
+
+  <script src="js/data.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- V2 Power-System Models -->
+  <!-- ========================================================= -->
+
+  <script src="js/models.js"></script>
+
+  <script src="js/system-loader-v2.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Network Matrices -->
+  <!-- ========================================================= -->
+
+  <script src="js/ybus.js"></script>
+
+  <script src="js/ybus-v2.js"></script>
+
+  <script src="js/matrix.js"></script>
+
+  <script src="js/matrix-inverse.js"></script>
+
+  <script src="js/zbus.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Common Result Model -->
+  <!-- ========================================================= -->
+
+  <script src="js/results.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Original Solver Engines -->
+  <!-- ========================================================= -->
+
+  <script src="js/newton.js"></script>
+
+  <script src="js/gaussseidel.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- V2 Solver Adapters -->
+  <!-- ========================================================= -->
+
+  <script src="js/newton-v2.js"></script>
+
+  <script src="js/gaussseidel-v2.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Unified Solver -->
+  <!-- ========================================================= -->
+
+  <script src="js/solver.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Engineering Units -->
+  <!-- ========================================================= -->
+
+  <script src="js/units.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Load-Flow Analysis -->
+  <!-- ========================================================= -->
+
+  <script src="js/line-flow.js"></script>
+
+  <script src="js/voltage-analysis.js"></script>
+
+  <script src="js/line-rating.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Fault Analysis -->
+  <!-- ========================================================= -->
+
+  <script src="js/fault-analysis.js"></script>
+
+  <script src="js/fault-study.js"></script>
+
+  <script src="js/fault-location-study.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Contingency Analysis -->
+  <!-- ========================================================= -->
+
+  <script src="js/contingency.js"></script>
+
+  <script src="js/contingency-analysis.js"></script>
+
+  <script src="js/contingency-thermal.js"></script>
+
+  <script src="js/contingency-ranking.js"></script>
+
+  <script src="js/contingency-ranking-report.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Engineering Reports -->
+  <!-- ========================================================= -->
+
+  <script src="js/report.js"></script>
+
+  <script src="js/report-export.js"></script>
+
+
+
+  <!-- ========================================================= -->
+  <!-- Browser Interface -->
+  <!-- ========================================================= -->
+
+  <script src="js/main.js"></script>
+
 
 </body>
 </html>
