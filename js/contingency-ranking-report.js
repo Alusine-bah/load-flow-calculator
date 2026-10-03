@@ -1,69 +1,57 @@
 // contingency-ranking-report.js
 // Explanation layer for contingency ranking
+//
+// NOTE:
+// The current severity score is a heuristic comparison metric.
+// It is not an industry-standard contingency performance index.
 
 
 function classifySeverity(score) {
 
-
   if (score >= 100) {
-
     return "CRITICAL";
-
   }
-
 
   if (score >= 20) {
-
     return "HIGH";
-
   }
-
 
   if (score >= 5) {
-
     return "MEDIUM";
-
   }
 
-
   return "NORMAL";
-
 }
 
 
 
 
 
-function findMaximumOverload(
+function findMaximumLoading(
   thermal
 ) {
-
 
   let max = 0;
 
   let line = null;
 
 
-
   for (const t of thermal) {
-
 
     if (
       t.after !== null &&
+      Number.isFinite(t.after) &&
       t.after > max
     ) {
 
-
-      max = t.after;
+      max =
+        t.after;
 
       line =
         `${t.from}-${t.to}`;
-
     }
 
-
   }
-
 
 
   return {
@@ -71,59 +59,132 @@ function findMaximumOverload(
     value:
       max,
 
-    line
+    line:
+      line
 
   };
-
 }
 
 
 
 
 
-function findMaximumVoltageDrop(
+function findMaximumVoltageDeviation(
   voltageImpact
 ) {
 
-
-  let maxDrop = 0;
+  let maxDeviation = 0;
 
   let bus = null;
 
 
-
   for (const v of voltageImpact) {
 
-
-    const drop =
-      Math.abs(v.deltaV);
-
-
-
-    if (drop > maxDrop) {
+    const deviation =
+      Math.abs(
+        v.deltaV
+      );
 
 
-      maxDrop = drop;
+    if (deviation > maxDeviation) {
+
+      maxDeviation =
+        deviation;
 
       bus =
         v.bus;
-
     }
 
-
   }
-
 
 
   return {
 
     value:
-      maxDrop,
+      maxDeviation,
 
-    bus
+    bus:
+      bus
 
   };
+}
 
+
+
+
+
+function determineReason(
+  severity,
+  maximumLoading,
+  maximumVoltageDeviation
+) {
+
+  // ------------------------------------------------
+  // NORMAL
+  // ------------------------------------------------
+
+  if (severity === "NORMAL") {
+
+    return "Minor impact";
+  }
+
+
+  // ------------------------------------------------
+  // Thermal violation
+  // ------------------------------------------------
+
+  if (
+    maximumLoading.value > 100 &&
+    maximumLoading.line !== null
+  ) {
+
+    return (
+      `Thermal overload ${maximumLoading.line} ` +
+      `(${maximumLoading.value.toFixed(2)}%)`
+    );
+  }
+
+
+  // ------------------------------------------------
+  // Voltage deviation
+  // ------------------------------------------------
+
+  if (
+    maximumVoltageDeviation.value > 0.05 &&
+    maximumVoltageDeviation.bus !== null
+  ) {
+
+    return (
+      `Voltage deviation Bus ` +
+      `${maximumVoltageDeviation.bus} ` +
+      `(${maximumVoltageDeviation.value.toFixed(4)} pu)`
+    );
+  }
+
+
+  // ------------------------------------------------
+  // Remaining severity levels
+  // ------------------------------------------------
+
+  if (severity === "MEDIUM") {
+
+    return "Moderate system impact";
+  }
+
+
+  if (severity === "HIGH") {
+
+    return "High combined system impact";
+  }
+
+
+  if (severity === "CRITICAL") {
+
+    return "Critical combined system impact";
+  }
+
+
+  return "Minor impact";
 }
 
 
@@ -134,54 +195,37 @@ function createContingencyRankingReport(
   ranking
 ) {
 
-
   return ranking.map(
 
-    (item,index)=>{
+    (item, index) => {
+
+      const severity =
+        classifySeverity(
+          item.score
+        );
 
 
-      const overload =
-        findMaximumOverload(
+      const maximumLoading =
+        findMaximumLoading(
           item.thermal
         );
 
 
-      const voltage =
-        findMaximumVoltageDrop(
+      const maximumVoltageDeviation =
+        findMaximumVoltageDeviation(
           item.impact.voltageImpact
         );
 
 
-
-      let reason =
-        "Low impact";
-
-
-
-      if (overload.value > 100) {
-
-
-        reason =
-          `Thermal overload ${overload.line}`;
-
-
-      }
-
-      else if (
-        voltage.value > 0.05
-      ) {
-
-
-        reason =
-          `Voltage drop Bus ${voltage.bus}`;
-
-
-      }
-
+      const reason =
+        determineReason(
+          severity,
+          maximumLoading,
+          maximumVoltageDeviation
+        );
 
 
       return {
-
 
         rank:
           index + 1,
@@ -196,29 +240,30 @@ function createContingencyRankingReport(
 
 
         severity:
-          classifySeverity(
-            item.score
-          ),
+          severity,
 
 
-        reason,
+        reason:
+          reason,
 
 
+        // Kept for compatibility with the current browser UI.
+        // This value represents the maximum post-contingency
+        // line loading percentage.
         maximumOverload:
-          overload.value,
+          maximumLoading.value,
 
 
+        // Kept for compatibility with the current browser UI.
+        // This is the maximum absolute voltage change.
         maximumVoltageDrop:
-          voltage.value
-
+          maximumVoltageDeviation.value
 
       };
-
 
     }
 
   );
-
 }
 
 
@@ -228,7 +273,6 @@ function createContingencyRankingReport(
 function printContingencyRankingReport(
   report
 ) {
-
 
   console.log(
     "\nCONTINGENCY SECURITY RANKING"
@@ -245,9 +289,7 @@ function printContingencyRankingReport(
   );
 
 
-
   for (const r of report) {
-
 
     console.log(
 
@@ -263,11 +305,11 @@ function printContingencyRankingReport(
 
     );
 
-
   }
 
-
 }
+
+
 
 
 
