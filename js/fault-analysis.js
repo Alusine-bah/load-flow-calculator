@@ -1,33 +1,92 @@
 // fault-analysis.js
 // Fault analysis framework using Zbus
 //
-// Current supported calculation:
-// Three Phase Fault
+// Supported:
+// - Three Phase Fault
 //
 // Future:
-// Single Line to Ground
-// Line to Line
-// Double Line to Ground
+// - SLG fault
+// - LL fault
+// - LLG fault
 //
 // Equation:
 // If = Vprefault / (Zth + Zf)
 
 
+function getZbusIndex(
+  system,
+  faultBus
+) {
+
+  if (!system || !system.buses) {
+
+    throw new Error(
+      "System bus data is unavailable."
+    );
+
+  }
+
+
+  const index =
+    system.buses.findIndex(
+      bus =>
+        bus.id === faultBus
+    );
+
+
+  if (index === -1) {
+
+    throw new Error(
+      "Fault bus " +
+      faultBus +
+      " does not exist."
+    );
+
+  }
+
+
+  return index;
+
+}
+
+
+
+
 
 function calculateFaultCurrent(
   zbus,
+  system,
   faultBus,
   prefaultVoltage = C.make(1, 0),
   faultImpedance = 0
 ) {
 
 
- const index =
-  faultBus - 1;
+  const index =
+    getZbusIndex(
+      system,
+      faultBus
+    );
 
 
-const Zth =
-  zbus[index][index];
+
+  if (
+    !zbus ||
+    !zbus[index] ||
+    !zbus[index][index]
+  ) {
+
+    throw new Error(
+      "Invalid Zbus matrix or bus index."
+    );
+
+  }
+
+
+
+  const Zth =
+    zbus[index][index];
+
 
 
   const Zf =
@@ -37,11 +96,13 @@ const Zth =
     );
 
 
+
   const denominator =
     C.add(
       Zth,
       Zf
     );
+
 
 
   const Ifault =
@@ -65,9 +126,15 @@ function getPrefaultVoltage(
 ) {
 
 
-  if (!result || !result.buses) {
+  if (
+    !result ||
+    !result.buses
+  ) {
 
-    return C.make(1, 0);
+    return C.make(
+      1,
+      0
+    );
 
   }
 
@@ -75,14 +142,17 @@ function getPrefaultVoltage(
 
   const bus =
     result.buses.find(
-      b => b.id === faultBus
+      b =>
+        b.id === faultBus
     );
 
 
 
   if (!bus) {
 
-    return C.make(1, 0);
+    throw new Error(
+      "Prefault voltage bus not found."
+    );
 
   }
 
@@ -131,17 +201,16 @@ function calculateFaultAnalysis(
 
 
 
-  if (options.prefaultVoltage) {
-
+  if (
+    options.prefaultVoltage
+  ) {
 
     prefaultVoltage =
       options.prefaultVoltage;
 
-
   }
 
   else {
-
 
     prefaultVoltage =
       getPrefaultVoltage(
@@ -162,6 +231,8 @@ function calculateFaultAnalysis(
     calculateFaultCurrent(
 
       zbus,
+
+      system,
 
       faultBus,
 
@@ -235,7 +306,9 @@ function calculateFaultAnalysis(
 
 
 
-function printFaultReport(result) {
+function printFaultReport(
+  result
+) {
 
 
   console.log(
@@ -248,12 +321,10 @@ function printFaultReport(result) {
   );
 
 
-
   console.log(
     "Fault Type:",
     result.faultType
   );
-
 
 
   console.log(
@@ -262,13 +333,11 @@ function printFaultReport(result) {
   );
 
 
-
   console.log(
     "Fault Impedance:",
     result.faultImpedance.toFixed(4),
     "pu"
   );
-
 
 
   console.log(
@@ -280,7 +349,6 @@ function printFaultReport(result) {
   );
 
 
-
   console.log(
     "Fault Current:",
     result.faultCurrent_pu.toFixed(4),
@@ -288,13 +356,11 @@ function printFaultReport(result) {
   );
 
 
-
   console.log(
     "Fault MVA:",
     result.faultMVA.toFixed(2),
     "MVA"
   );
-
 
 
   console.log(
