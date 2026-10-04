@@ -1,6 +1,6 @@
 // ybus.js — construct the bus admittance matrix from line data
 // Requires: complex.js (loaded first, provides window.C)
-let C;
+var C;
 
 if (typeof require !== "undefined") {
   ({ C } = require("./complex.js"));

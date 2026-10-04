@@ -15,7 +15,7 @@
 // Exposes: window.solveGaussSeidel(system) -> result object
 // Same result schema as solveNewton so callers can compare directly.
 
-let C, buildYbus, buildYbusV2;
+var C, buildYbus, buildYbusV2;
 
 if (typeof require !== "undefined") {
   ({ C } = require("./complex.js"));

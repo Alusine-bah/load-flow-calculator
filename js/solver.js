@@ -1,7 +1,7 @@
 // solver.js
 // Unified power flow solver interface for V2 engine
 
-let solveNewtonV2, solveGaussSeidelV2;
+var solveNewtonV2, solveGaussSeidelV2;
 
 if (typeof require !== "undefined") {
   try {

@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------
 // Dependency loading (Node.js + browser)
 // ---------------------------------------------------------------
-let C, buildYbus, buildYbusV2;
+var C, buildYbus, buildYbusV2;
 
 if (typeof require !== "undefined") {
   ({ C } = require("./complex.js"));

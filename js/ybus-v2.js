@@ -7,7 +7,7 @@
 // - Line conductance (G)
 // - Independent bus shunts
 
-let C;
+var C;
 
 if (typeof require !== "undefined") {
   ({ C } = require("./complex.js"));

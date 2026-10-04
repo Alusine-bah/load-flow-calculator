@@ -2,7 +2,7 @@
 // Adapter between PowerSystem V2 model and existing Gauss-Seidel solver
 // Converts output into common LoadFlowResult format
 
-let solveGaussSeidel, LoadFlowResult;
+var solveGaussSeidel, LoadFlowResult;
 
 if (typeof require !== "undefined") {
   ({ solveGaussSeidel } = require("./gaussseidel.js"));
