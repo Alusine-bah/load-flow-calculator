@@ -48,7 +48,7 @@ function solveGaussSeidelV2(powerSystem) {
 
 
 
-  // Convert buses (MW/MVAr → pu)
+  // Convert buses (all values in pu)
 
   for (const bus of powerSystem.buses) {
 
@@ -64,14 +64,14 @@ function solveGaussSeidelV2(powerSystem) {
       delta: bus.delta,
 
 
-      Pgen:  (bus.Pgen  || 0) / baseMVA,
+      Pgen:  bus.Pgen  || 0,
 
-      Qgen:  (bus.Qgen  || 0) / baseMVA,
+      Qgen:  bus.Qgen  || 0,
 
 
-      Pload: (bus.Pload || 0) / baseMVA,
+      Pload: bus.Pload || 0,
 
-      Qload: (bus.Qload || 0) / baseMVA
+      Qload: bus.Qload || 0
 
     });
 
@@ -150,19 +150,19 @@ function solveGaussSeidelV2(powerSystem) {
 
 
 
-  // Convert back to MW/MVAr for presentation
+  // Backfill slack bus Pgen/Qgen from computed injection.
 
   for (const bus of solverResult.busResults) {
 
     const isSlack = (bus.type === "Slack");
 
-    const Pgen_MW  = isSlack
-      ? (bus.P_calc * baseMVA) + (bus.Pload * baseMVA)
-      : (bus.Pgen * baseMVA);
+    const Pgen = isSlack
+      ? bus.P_calc + bus.Pload
+      : bus.Pgen;
 
-    const Qgen_MVAr = isSlack
-      ? (bus.Q_calc * baseMVA) + (bus.Qload * baseMVA)
-      : (bus.Qgen * baseMVA);
+    const Qgen = isSlack
+      ? bus.Q_calc + bus.Qload
+      : bus.Qgen;
 
 
     result.addBusResult({
@@ -177,19 +177,19 @@ function solveGaussSeidelV2(powerSystem) {
       delta_deg: bus.delta_deg,
 
 
-      P_calc: bus.P_calc * baseMVA,
+      P_calc: bus.P_calc,
 
-      Q_calc: bus.Q_calc * baseMVA,
-
-
-      Pgen:  Pgen_MW,
-
-      Qgen:  Qgen_MVAr,
+      Q_calc: bus.Q_calc,
 
 
-      Pload: bus.Pload * baseMVA,
+      Pgen:  Pgen,
 
-      Qload: bus.Qload * baseMVA
+      Qgen:  Qgen,
+
+
+      Pload: bus.Pload,
+
+      Qload: bus.Qload
 
     });
 
