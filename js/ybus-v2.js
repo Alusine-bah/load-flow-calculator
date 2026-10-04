@@ -7,7 +7,15 @@
 // - Line conductance (G)
 // - Independent bus shunts
 
+let C;
 
+if (typeof require !== "undefined") {
+  ({ C } = require("./complex.js"));
+}
+
+if (typeof window !== "undefined") {
+  C = window.C;
+}
 function buildYbusV2(system) {
 
 
@@ -208,5 +216,9 @@ function buildYbusV2(system) {
 
 
 
-window.buildYbusV2 =
-  buildYbusV2;
+if (typeof window !== "undefined") {
+  window.buildYbusV2 = buildYbusV2;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { buildYbusV2 };
+}

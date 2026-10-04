@@ -13,18 +13,19 @@
 // ---------------------------------------------------------------
 // Dependency loading (Node.js + browser)
 // ---------------------------------------------------------------
-let C, buildYbus;
+let C, buildYbus, buildYbusV2;
 
 if (typeof require !== "undefined") {
   ({ C } = require("./complex.js"));
   ({ buildYbus } = require("./ybus.js"));
+  ({ buildYbusV2 } = require("./ybus-v2.js"));
 }
 
 if (typeof window !== "undefined") {
   C = window.C;
   buildYbus = window.buildYbus;
+  buildYbusV2 = window.buildYbusV2;
 }
-
 // ---------------------------------------------------------------
 // Linear solver: A * x = b, by Gaussian elimination with
 // partial pivoting. A is square n x n, b is length n.
