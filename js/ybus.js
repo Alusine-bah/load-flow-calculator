@@ -1,6 +1,14 @@
 // ybus.js — construct the bus admittance matrix from line data
 // Requires: complex.js (loaded first, provides window.C)
+let C;
 
+if (typeof require !== "undefined") {
+  ({ C } = require("./complex.js"));
+}
+
+if (typeof window !== "undefined") {
+  C = window.C;
+}
 function buildYbus(system) {
   const n = system.buses.length;
   const Y = [];
@@ -60,5 +68,10 @@ function printYbus(Y) {
   }
 }
 
-window.buildYbus = buildYbus;
-window.printYbus = printYbus;
+if (typeof window !== "undefined") {
+  window.buildYbus = buildYbus;
+  window.printYbus = printYbus;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { buildYbus, printYbus };
+}

@@ -2,9 +2,20 @@
 // Adapter between PowerSystem V2 model and Newton solver
 // Converts solver output into common LoadFlowResult format
 
+let solveNewton, LoadFlowResult;
+
+if (typeof require !== "undefined") {
+  ({ solveNewton } = require("./newton.js"));
+  ({ LoadFlowResult } = require("./results.js"));
+}
+
+if (typeof window !== "undefined") {
+  solveNewton = window.solveNewton;
+  LoadFlowResult = window.LoadFlowResult;
+}
+
 
 function solveNewtonV2(powerSystem) {
-
 
   // ---------------------------------------
   // Convert V2 PowerSystem to solver format
@@ -160,4 +171,9 @@ function solveNewtonV2(powerSystem) {
 
 
 
-window.solveNewtonV2 = solveNewtonV2;
+if (typeof window !== "undefined") {
+  window.solveNewtonV2 = solveNewtonV2;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { solveNewtonV2 };
+}

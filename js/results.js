@@ -60,6 +60,9 @@ class LoadFlowResult {
     let Pload = 0;
     let Qload = 0;
 
+    let Pcalc_sum = 0;
+    let Qcalc_sum = 0;
+
 
     for (const bus of this.buses) {
 
@@ -68,6 +71,9 @@ class LoadFlowResult {
 
       Pload += bus.Pload || 0;
       Qload += bus.Qload || 0;
+
+      Pcalc_sum += bus.P_calc || 0;
+      Qcalc_sum += bus.Q_calc || 0;
 
     }
 
@@ -85,11 +91,8 @@ class LoadFlowResult {
 
 
     this.summary.losses = {
-
-      P: Pgen - Pload,
-
-      Q: Qgen - Qload
-
+      P: Pcalc_sum,
+      Q: Qcalc_sum
     };
 
   }
@@ -138,4 +141,9 @@ class LoadFlowResult {
 }
 
 
-window.LoadFlowResult = LoadFlowResult;
+if (typeof window !== "undefined") {
+  window.LoadFlowResult = LoadFlowResult;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { LoadFlowResult };
+}

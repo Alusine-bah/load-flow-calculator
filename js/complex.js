@@ -83,4 +83,9 @@ const C = {
 };
 
 // Attach to window so other scripts can use it
-window.C = C;
+if (typeof window !== "undefined") {
+  window.C = C;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { C };
+}

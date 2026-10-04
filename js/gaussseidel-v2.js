@@ -159,4 +159,9 @@ function solveGaussSeidelV2(powerSystem) {
 
 
 
-window.solveGaussSeidelV2 = solveGaussSeidelV2;
+if (typeof window !== "undefined") {
+  window.solveGaussSeidelV2 = solveGaussSeidelV2;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { solveGaussSeidelV2 };
+}

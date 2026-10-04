@@ -11,6 +11,21 @@
 // are documented in NOTATION.md.
 
 // ---------------------------------------------------------------
+// Dependency loading (Node.js + browser)
+// ---------------------------------------------------------------
+let C, buildYbus;
+
+if (typeof require !== "undefined") {
+  ({ C } = require("./complex.js"));
+  ({ buildYbus } = require("./ybus.js"));
+}
+
+if (typeof window !== "undefined") {
+  C = window.C;
+  buildYbus = window.buildYbus;
+}
+
+// ---------------------------------------------------------------
 // Linear solver: A * x = b, by Gaussian elimination with
 // partial pivoting. A is square n x n, b is length n.
 // Returns x as an array, or throws if A is singular.
@@ -75,17 +90,15 @@ function solveNewton(system) {
 
   // --- 1. Build Y-bus ---
   const Y =
-  system.useV2Ybus && typeof buildYbusV2 === "function"
-  ? buildYbusV2(system)
-  : buildYbus(system);
+    system.useV2Ybus && typeof buildYbusV2 === "function"
+      ? buildYbusV2(system)
+      : buildYbus(system);
 
   // --- 2. Identify bus indices ---
   // 0-based indexing throughout. Bus 0 is the slack bus.
   const slackIndex = 0;
 
   // --- 3. Initialize V and delta (flat start for unknowns) ---
-  // V and delta are stored as complex magnitudes and angles,
-  // in radians internally.
   const Vmag = new Array(n);
   const Vang = new Array(n);
   for (let i = 0; i < n; i++) {
@@ -94,13 +107,10 @@ function solveNewton(system) {
   }
 
   // --- 4. Determine which buses are PQ and PV ---
-  // PQ bus: unknown = (delta, V_mag)
-  // PV bus: unknown = (delta); V_mag fixed
-  // Slack:  both fixed
   const isPQ = [];
   const isPV = [];
-  const pqIndices = [];  // indices of PQ buses (0-based)
-  const pvIndices = [];  // indices of PV buses (0-based)
+  const pqIndices = [];
+  const pvIndices = [];
   for (let i = 0; i < n; i++) {
     const t = system.buses[i].type;
     isPQ[i] = (t === "PQ");
@@ -111,11 +121,6 @@ function solveNewton(system) {
     }
   }
 
-  // The state vector layout:
-  //   [ d_1, d_2, ..., d_{n-1},          angles of all non-slack buses
-  //     V_1, V_2, ..., V_{num_PQ} ]      magnitudes of all PQ buses
-  //
-  // where indices refer to position in pqIndices (not bus number).
   const nAngleVars = n - 1;
   const nMagVars = pqIndices.length;
   const stateSize = nAngleVars + nMagVars;
@@ -132,9 +137,6 @@ function solveNewton(system) {
   for (iter = 0; iter < maxIter; iter++) {
 
     // --- 5a. Compute injected powers at each bus ---
-    // P_i = V_i * sum_j [ V_j * (G_ij cos(theta_ij) + B_ij sin(theta_ij)) ]
-    // Q_i = V_i * sum_j [ V_j * (G_ij sin(theta_ij) - B_ij cos(theta_ij)) ]
-    // where theta_ij = delta_i - delta_j.
     const Pcalc = new Array(n).fill(0);
     const Qcalc = new Array(n).fill(0);
     for (let i = 0; i < n; i++) {
@@ -152,12 +154,10 @@ function solveNewton(system) {
       Qcalc[i] = Vmag[i] * Qi;
     }
 
-    // --- 5b. Compute mismatches at each non-slack bus ---
-    // Scheduled injection = Pgen - Pload (from data.js)
-    // We collect mismatches in the state-vector order.
+    // --- 5b. Compute mismatches ---
     const mismatch = [];
-    const busIdxsByAngle = []; // bus index for each angle variable
-    const busIdxsByMag = [];   // bus index for each magnitude variable
+    const busIdxsByAngle = [];
+    const busIdxsByMag = [];
 
     for (let i = 0; i < n; i++) {
       if (i === slackIndex) continue;
@@ -167,12 +167,10 @@ function solveNewton(system) {
       busIdxsByMag.push(pqIndices[k]);
     }
 
-    // Angle mismatches first (all non-slack buses)
     for (const i of busIdxsByAngle) {
       const Psch = system.buses[i].Pgen - system.buses[i].Pload;
       mismatch.push(Psch - Pcalc[i]);
     }
-    // Then magnitude mismatches (PQ buses only)
     for (const i of busIdxsByMag) {
       const Qsch = system.buses[i].Qgen - system.buses[i].Qload;
       mismatch.push(Qsch - Qcalc[i]);
@@ -185,7 +183,6 @@ function solveNewton(system) {
       if (a > maxMismatch) maxMismatch = a;
     }
 
-    // For logging we break mismatch into dP and dQ parts
     let maxDP = 0, maxDQ = 0;
     for (let k = 0; k < nAngleVars; k++) {
       const a = Math.abs(mismatch[k]);
@@ -209,18 +206,6 @@ function solveNewton(system) {
     }
 
     // --- 5d. Build the Jacobian ---
-    // Standard NR power flow Jacobian, 4 submatrices:
-    //   J = [ J11  J12 ]   where J11 = dP/ddelta      (nA x nA)
-    //       [ J21  J22 ]         J12 = dP/dV          (nA x nM)
-    //                            J21 = dQ/ddelta      (nM x nA)
-    //                            J22 = dQ/dV          (nM x nM)
-    //
-    // We use the polar-form derivatives from Grainger & Stevenson
-    // and Saadat (identical to your reference PDFs).
-    //
-    // Indices:
-    //   For angle row k: bus i = busIdxsByAngle[k]
-    //   For magnitude row/col k: bus i = busIdxsByMag[k]
     const J = [];
     for (let r = 0; r < stateSize; r++) {
       J.push(new Array(stateSize).fill(0));
@@ -232,10 +217,8 @@ function solveNewton(system) {
       for (let b = 0; b < nAngleVars; b++) {
         const j = busIdxsByAngle[b];
         if (i === j) {
-          // Diagonal: -Q_i - B_ii * V_i^2
           J[a][b] = -Qcalc[i] - Y[i][i].im * Vmag[i] * Vmag[i];
         } else {
-          // Off-diagonal: V_i V_j (G_ij sin(theta_ij) - B_ij cos(theta_ij))
           const theta = Vang[i] - Vang[j];
           J[a][b] = Vmag[i] * Vmag[j] *
             (Y[i][j].re * Math.sin(theta) - Y[i][j].im * Math.cos(theta));
@@ -243,17 +226,15 @@ function solveNewton(system) {
       }
     }
 
-    // --- J12: dP_i / dV_j (for PQ buses only) ---
+    // --- J12: dP_i / dV_j ---
     for (let a = 0; a < nAngleVars; a++) {
       const i = busIdxsByAngle[a];
       for (let b = 0; b < nMagVars; b++) {
         const j = busIdxsByMag[b];
         const col = nAngleVars + b;
         if (i === j) {
-          // Diagonal: P_i / V_i + G_ii * V_i
           J[a][col] = Pcalc[i] / Vmag[i] + Y[i][i].re * Vmag[i];
         } else {
-          // Off-diagonal: V_i (G_ij cos(theta_ij) + B_ij sin(theta_ij))
           const theta = Vang[i] - Vang[j];
           J[a][col] = Vmag[i] *
             (Y[i][j].re * Math.cos(theta) + Y[i][j].im * Math.sin(theta));
@@ -268,10 +249,8 @@ function solveNewton(system) {
       for (let b = 0; b < nAngleVars; b++) {
         const j = busIdxsByAngle[b];
         if (i === j) {
-          // Diagonal: P_i - G_ii * V_i^2
           J[row][b] = Pcalc[i] - Y[i][i].re * Vmag[i] * Vmag[i];
         } else {
-          // Off-diagonal: -V_i V_j (G_ij cos(theta_ij) + B_ij sin(theta_ij))
           const theta = Vang[i] - Vang[j];
           J[row][b] = -Vmag[i] * Vmag[j] *
             (Y[i][j].re * Math.cos(theta) + Y[i][j].im * Math.sin(theta));
@@ -287,10 +266,8 @@ function solveNewton(system) {
         const j = busIdxsByMag[b];
         const col = nAngleVars + b;
         if (i === j) {
-          // Diagonal: Q_i / V_i - B_ii * V_i
           J[row][col] = Qcalc[i] / Vmag[i] - Y[i][i].im * Vmag[i];
         } else {
-          // Off-diagonal: V_i (G_ij sin(theta_ij) - B_ij cos(theta_ij))
           const theta = Vang[i] - Vang[j];
           J[row][col] = Vmag[i] *
             (Y[i][j].re * Math.sin(theta) - Y[i][j].im * Math.cos(theta));
@@ -301,7 +278,6 @@ function solveNewton(system) {
     // --- 5e. Solve J * dx = mismatch ---
     const dx = solveLinear(J, mismatch);
 
-    // Record first-iteration details for display
     if (iter === 0) {
       firstJacobian = J.map(row => row.slice());
       firstMismatch = mismatch.slice();
@@ -309,22 +285,17 @@ function solveNewton(system) {
     }
 
     // --- 5f. Update state variables ---
-    // dx[0..nAngleVars-1] are corrections to Vang[i] for i in busIdxsByAngle
-    // dx[nAngleVars..]     are corrections to Vmag[i] / Vmag[i] for PQ buses
     for (let a = 0; a < nAngleVars; a++) {
       const i = busIdxsByAngle[a];
       Vang[i] += dx[a];
     }
     for (let a = 0; a < nMagVars; a++) {
       const i = busIdxsByMag[a];
-      // The state variable is Vmag_i, and dx is d(Vmag_i) directly
-      // (not dV/V). Update directly.
       Vmag[i] += dx[nAngleVars + a];
     }
   }
 
   // --- 6. Build result object ---
-  // Compute final injections at all buses (including slack and PV)
   const Pcalc = new Array(n).fill(0);
   const Qcalc = new Array(n).fill(0);
   for (let i = 0; i < n; i++) {
@@ -368,5 +339,12 @@ function solveNewton(system) {
   };
 }
 
-// Expose to the browser
-window.solveNewton = solveNewton;
+// ---------------------------------------------------------------
+// Exports (browser + Node.js)
+// ---------------------------------------------------------------
+if (typeof window !== "undefined") {
+  window.solveNewton = solveNewton;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { solveNewton };
+}
