@@ -140,11 +140,117 @@ class PowerSystem {
   get numberOfBuses() {
     return this.buses.length;
   }
+
+
+  validate() {
+
+    const errors = [];
+
+    // ----------------------------
+    // Bus checks
+    // ----------------------------
+
+    if (this.buses.length === 0) {
+      errors.push("System has no buses.");
+    }
+
+    const ids = new Set();
+
+    for (const bus of this.buses) {
+
+      if (ids.has(bus.id)) {
+        errors.push(`Duplicate bus id ${bus.id}`);
+      }
+
+      ids.add(bus.id);
+
+      const allowedTypes = ["Slack", "PV", "PQ"];
+
+      if (!allowedTypes.includes(bus.type)) {
+        errors.push(
+          `Invalid bus type ${bus.type} at bus ${bus.id}`
+        );
+      }
+
+    }
+
+    // ----------------------------
+    // Slack bus check
+    // ----------------------------
+
+    const slackCount =
+      this.buses.filter(b => b.type === "Slack").length;
+
+    if (slackCount === 0) {
+      errors.push("No Slack bus defined.");
+    }
+
+    if (slackCount > 1) {
+      errors.push("Multiple Slack buses defined.");
+    }
+
+    // ----------------------------
+    // Line checks
+    // ----------------------------
+
+    for (const line of this.lines) {
+
+      const fromExists =
+        this.buses.some(b => b.id === line.from);
+
+      const toExists =
+        this.buses.some(b => b.id === line.to);
+
+      if (!fromExists || !toExists) {
+        errors.push(
+          `Line ${line.from}-${line.to} references unknown bus.`
+        );
+      }
+
+      if (line.R === 0 && line.X === 0) {
+        errors.push(
+          `Line ${line.from}-${line.to} has zero impedance.`
+        );
+      }
+
+    }
+
+    // ----------------------------
+    // Base checks
+    // ----------------------------
+
+    if (this.baseMVA <= 0) {
+      errors.push("Base MVA must be positive.");
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+
+  }
+
+}   // <-- closes PowerSystem class
+
+
+// ----------------------------
+// Exports (Browser + Node.js)
+// ----------------------------
+
+if (typeof window !== "undefined") {
+  window.Bus = Bus;
+  window.Line = Line;
+  window.Generator = Generator;
+  window.Shunt = Shunt;
+  window.PowerSystem = PowerSystem;
 }
 
-
-window.Bus = Bus;
-window.Line = Line;
-window.Generator = Generator;
-window.Shunt = Shunt;
-window.PowerSystem = PowerSystem;
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    Bus,
+    Line,
+    Generator,
+    Shunt,
+    PowerSystem
+  };
+}
