@@ -8,6 +8,7 @@ class LoadFlowResult {
     method = "",
     converged = false,
     iterations = 0,
+    baseMVA = 100,
     buses = [],
     convergenceHistory = []
   } = {}) {
@@ -17,6 +18,8 @@ class LoadFlowResult {
     this.converged = converged;
 
     this.iterations = iterations;
+
+    this.baseMVA = baseMVA;
 
     this.buses = buses;
 

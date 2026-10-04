@@ -21,11 +21,13 @@ function solveNewtonV2(powerSystem) {
   // Convert V2 PowerSystem to solver format
   // ---------------------------------------
 
+  const baseMVA = powerSystem.baseMVA || 100;
+
   const system = {
 
     name: powerSystem.name,
 
-    baseMVA: powerSystem.baseMVA,
+    baseMVA: baseMVA,
 
     baseKV: powerSystem.baseKV,
 
@@ -45,7 +47,7 @@ function solveNewtonV2(powerSystem) {
 
 
 
-  // Convert buses
+  // Convert buses (MW/MVAr → pu)
 
   for (const bus of powerSystem.buses) {
 
@@ -61,14 +63,14 @@ function solveNewtonV2(powerSystem) {
       delta: bus.delta,
 
 
-      Pgen: bus.Pgen,
+      Pgen:  (bus.Pgen  || 0) / baseMVA,
 
-      Qgen: bus.Qgen,
+      Qgen:  (bus.Qgen  || 0) / baseMVA,
 
 
-      Pload: bus.Pload,
+      Pload: (bus.Pload || 0) / baseMVA,
 
-      Qload: bus.Qload
+      Qload: (bus.Qload || 0) / baseMVA
 
     });
 
@@ -76,7 +78,7 @@ function solveNewtonV2(powerSystem) {
 
 
 
-  // Convert lines
+  // Convert lines (already in pu)
 
   for (const line of powerSystem.lines) {
 
@@ -119,13 +121,29 @@ function solveNewtonV2(powerSystem) {
 
     iterations: solverResult.iterations,
 
+    baseMVA: baseMVA,
+
     convergenceHistory: solverResult.convergenceLog || []
 
   });
 
 
 
+  // Convert back to MW/MVAr for presentation
+
   for (const bus of solverResult.busResults) {
+
+    const isSlack = (bus.type === "Slack");
+
+    // At the slack bus, actual generation = computed injection + load.
+    // At all other buses, Pgen/Qgen are the scheduled values from input.
+    const Pgen_MW  = isSlack
+      ? (bus.P_calc * baseMVA) + (bus.Pload * baseMVA)
+      : (bus.Pgen * baseMVA);
+
+    const Qgen_MVAr = isSlack
+      ? (bus.Q_calc * baseMVA) + (bus.Qload * baseMVA)
+      : (bus.Qgen * baseMVA);
 
 
     result.addBusResult({
@@ -140,22 +158,21 @@ function solveNewtonV2(powerSystem) {
       delta_deg: bus.delta_deg,
 
 
-      P_calc: bus.P_calc,
+      P_calc: bus.P_calc * baseMVA,
 
-      Q_calc: bus.Q_calc,
-
-
-      Pgen: bus.Pgen,
-
-      Qgen: bus.Qgen,
+      Q_calc: bus.Q_calc * baseMVA,
 
 
-      Pload: bus.Pload,
+      Pgen:  Pgen_MW,
 
-      Qload: bus.Qload
+      Qgen:  Qgen_MVAr,
+
+
+      Pload: bus.Pload * baseMVA,
+
+      Qload: bus.Qload * baseMVA
 
     });
-
 
   }
 

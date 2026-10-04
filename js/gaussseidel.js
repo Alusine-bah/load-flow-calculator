@@ -15,6 +15,17 @@
 // Exposes: window.solveGaussSeidel(system) -> result object
 // Same result schema as solveNewton so callers can compare directly.
 
+let C, buildYbus;
+
+if (typeof require !== "undefined") {
+  ({ C } = require("./complex.js"));
+  ({ buildYbus } = require("./ybus.js"));
+}
+
+if (typeof window !== "undefined") {
+  C = window.C;
+  buildYbus = window.buildYbus;
+}
 function solveGaussSeidel(system) {
   const n = system.buses.length;
   const tol = system.tol || 1e-9;
@@ -172,4 +183,9 @@ function solveGaussSeidel(system) {
   };
 }
 
-window.solveGaussSeidel = solveGaussSeidel;
+if (typeof window !== "undefined") {
+  window.solveGaussSeidel = solveGaussSeidel;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { solveGaussSeidel };
+}
