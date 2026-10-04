@@ -41,7 +41,9 @@ function solveNewtonV2(powerSystem) {
 
     buses: [],
 
-    lines: []
+    lines: [],
+
+    shunts: []
 
   };
 
@@ -94,6 +96,24 @@ function solveNewtonV2(powerSystem) {
       X: line.X,
 
       B: line.B
+
+    });
+
+  }
+
+
+
+  // Convert shunts (already in pu)
+
+  for (const shunt of (powerSystem.shunts || [])) {
+
+    system.shunts.push({
+
+      busId: shunt.busId,
+
+      G: shunt.G,
+
+      B: shunt.B
 
     });
 

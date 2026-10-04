@@ -40,7 +40,9 @@ function solveGaussSeidelV2(powerSystem) {
 
     buses: [],
 
-    lines: []
+    lines: [],
+
+    shunts: []
 
   };
 
@@ -94,6 +96,24 @@ function solveGaussSeidelV2(powerSystem) {
 
 
       B: line.B
+
+    });
+
+  }
+
+
+
+  // Convert shunts (already in pu)
+
+  for (const shunt of (powerSystem.shunts || [])) {
+
+    system.shunts.push({
+
+      busId: shunt.busId,
+
+      G: shunt.G,
+
+      B: shunt.B
 
     });
 
