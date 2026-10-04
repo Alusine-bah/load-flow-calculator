@@ -18,6 +18,8 @@ function solveNewtonV2(powerSystem) {
 
     baseKV: powerSystem.baseKV,
 
+    useV2Ybus: true,
+
 
     tol: 1e-9,
 

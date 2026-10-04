@@ -74,7 +74,10 @@ function solveNewton(system) {
   const maxIter = system.maxIter || 30;
 
   // --- 1. Build Y-bus ---
-  const Y = buildYbus(system);
+  const Y =
+  system.useV2Ybus && typeof buildYbusV2 === "function"
+  ? buildYbusV2(system)
+  : buildYbus(system);
 
   // --- 2. Identify bus indices ---
   // 0-based indexing throughout. Bus 0 is the slack bus.
