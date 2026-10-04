@@ -17,7 +17,7 @@ function solveGaussSeidelV2(powerSystem) {
     baseMVA: powerSystem.baseMVA,
 
     baseKV: powerSystem.baseKV,
-
+     useV2Ybus: true,
 
     tol: 1e-9,
 

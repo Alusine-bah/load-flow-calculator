@@ -20,7 +20,10 @@ function solveGaussSeidel(system) {
   const tol = system.tol || 1e-9;
   const maxIter = system.maxIter || 500;
 
-  const Y = buildYbus(system);
+  const Y =
+  system.useV2Ybus && typeof buildYbusV2 === "function"
+  ? buildYbusV2(system)
+  : buildYbus(system);
 
   // --- Initialize V as complex phasors ---
   // V[i] = Vmag[i] * exp(j * delta[i])
