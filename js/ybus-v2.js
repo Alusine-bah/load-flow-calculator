@@ -7,15 +7,15 @@
 // - Line conductance (G)
 // - Independent bus shunts
 
-var C;
+let C_local;
 
 if (typeof require !== "undefined") {
-  ({ C } = require("./complex.js"));
+  ({ C: C_local } = require("./complex.js"));
+}
+else if (typeof window !== "undefined") {
+  C_local = window.C;
 }
 
-if (typeof window !== "undefined") {
-  C = window.C;
-}
 function buildYbusV2(system) {
 
 
@@ -49,7 +49,7 @@ function buildYbusV2(system) {
     for (let j = 0; j < n; j++) {
 
       Y[i][j] =
-        C.zero();
+        C_local.zero();
 
     }
 
@@ -86,7 +86,7 @@ function buildYbusV2(system) {
 
 
     const Z =
-      C.make(
+      C_local.make(
         line.R,
         line.X
       );
@@ -107,15 +107,15 @@ function buildYbusV2(system) {
 
 
     const ySeries =
-      C.div(
-        C.make(1,0),
+      C_local.div(
+        C_local.make(1,0),
         Z
       );
 
 
 
     const yShunt =
-      C.make(
+      C_local.make(
         line.G || 0,
         (line.B || 0) / 2
       );
@@ -125,9 +125,9 @@ function buildYbusV2(system) {
     // Diagonal terms
 
     Y[i][i] =
-      C.add(
+      C_local.add(
         Y[i][i],
-        C.add(
+        C_local.add(
           ySeries,
           yShunt
         )
@@ -136,9 +136,9 @@ function buildYbusV2(system) {
 
 
     Y[j][j] =
-      C.add(
+      C_local.add(
         Y[j][j],
-        C.add(
+        C_local.add(
           ySeries,
           yShunt
         )
@@ -149,14 +149,14 @@ function buildYbusV2(system) {
     // Off-diagonal terms
 
     Y[i][j] =
-      C.sub(
+      C_local.sub(
         Y[i][j],
         ySeries
       );
 
 
     Y[j][i] =
-      C.sub(
+      C_local.sub(
         Y[j][i],
         ySeries
       );
@@ -193,7 +193,7 @@ function buildYbusV2(system) {
 
 
     const yShunt =
-      C.make(
+      C_local.make(
         shunt.G || 0,
         shunt.B || 0
       );
@@ -201,7 +201,7 @@ function buildYbusV2(system) {
 
 
     Y[i][i] =
-      C.add(
+      C_local.add(
         Y[i][i],
         yShunt
       );

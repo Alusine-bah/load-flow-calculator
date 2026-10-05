@@ -13,16 +13,16 @@
 // ---------------------------------------------------------------
 // Dependency loading (Node.js + browser)
 // ---------------------------------------------------------------
-var C, buildYbus, buildYbusV2;
+let C_local, buildYbus, buildYbusV2;
 
 if (typeof require !== "undefined") {
-  ({ C } = require("./complex.js"));
+  ({C: C_local } = require("./complex.js"));
   ({ buildYbus } = require("./ybus.js"));
   ({ buildYbusV2 } = require("./ybus-v2.js"));
 }
 
 if (typeof window !== "undefined") {
-  C = window.C;
+ C_local = window.C;
   buildYbus = window.buildYbus;
   buildYbusV2 = window.buildYbusV2;
 }

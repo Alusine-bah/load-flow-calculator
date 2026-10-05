@@ -1,19 +1,18 @@
 // gaussseidel-v2.js
 // Adapter between PowerSystem V2 model and existing Gauss-Seidel solver
-// Converts output into common LoadFlowResult format
+// Converts output into common LoadFlowResult_local format
 
-var solveGaussSeidel, LoadFlowResult;
+let solveGaussSeidel_local, LoadFlowResult_local;
 
 if (typeof require !== "undefined") {
-  ({ solveGaussSeidel } = require("./gaussseidel.js"));
-  ({ LoadFlowResult } = require("./results.js"));
+  ({ solveGaussSeidel: solveGaussSeidel_local } = require("./gaussseidel.js"));
+  ({ LoadFlowResult: LoadFlowResult_local } = require("./results.js"));
 }
 
 if (typeof window !== "undefined") {
-  solveGaussSeidel = window.solveGaussSeidel;
-  LoadFlowResult = window.LoadFlowResult;
+  solveGaussSeidel_local = window.solveGaussSeidel;
+  LoadFlowResult_local = window.LoadFlowResult;
 }
-
 
 function solveGaussSeidelV2(powerSystem) {
 
@@ -125,16 +124,16 @@ function solveGaussSeidelV2(powerSystem) {
   // Run existing Gauss-Seidel solver
   // ======================================
 
-  const solverResult = solveGaussSeidel(system);
+  const solverResult = solveGaussSeidel_local(system);
 
 
 
 
   // ======================================
-  // Convert output to LoadFlowResult
+  // Convert output to LoadFlowResult_local
   // ======================================
 
-  const result = new LoadFlowResult({
+  const result = new LoadFlowResult_local({
 
     method: "Gauss-Seidel",
 

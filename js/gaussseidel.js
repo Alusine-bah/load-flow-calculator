@@ -15,16 +15,16 @@
 // Exposes: window.solveGaussSeidel(system) -> result object
 // Same result schema as solveNewton so callers can compare directly.
 
-var C, buildYbus, buildYbusV2;
+let C_local, buildYbus, buildYbusV2;
 
 if (typeof require !== "undefined") {
-  ({ C } = require("./complex.js"));
+  ({ C: C_local } = require("./complex.js"));
   ({ buildYbus } = require("./ybus.js"));
   ({ buildYbusV2 } = require("./ybus-v2.js"));
 }
 
 if (typeof window !== "undefined") {
-  C = window.C;
+  C_local = window.C;
   buildYbus = window.buildYbus;
   buildYbusV2 = window.buildYbusV2;
 }function solveGaussSeidel(system) {
@@ -44,7 +44,7 @@ if (typeof window !== "undefined") {
     const b = system.buses[i];
     const re = b.V * Math.cos(b.delta * Math.PI / 180);
     const im = b.V * Math.sin(b.delta * Math.PI / 180);
-    V.push(C.make(re, im));
+    V.push(C_local.make(re, im));
   }
 
   // --- Bus classification ---
@@ -72,7 +72,7 @@ if (typeof window !== "undefined") {
   let iter = 0;
 
   for (iter = 0; iter < maxIter; iter++) {
-    const Vprev = V.map(v => C.make(v.re, v.im));
+    const Vprev = V.map(v => C_local.make(v.re, v.im));
     let maxDelta = 0;
 
     for (let i = 0; i < n; i++) {
@@ -80,21 +80,21 @@ if (typeof window !== "undefined") {
 
       // Compute the "sum of off-diagonal terms"
       //   sum_j Y_ij * V_j   for j != i
-      let sum = C.make(0, 0);
+      let sum = C_local.make(0, 0);
       for (let j = 0; j < n; j++) {
         if (j === i) continue;
-        sum = C.add(sum, C.mul(Y[i][j], V[j]));
+        sum = C_local.add(sum, C_local.mul(Y[i][j], V[j]));
       }
 
       if (isPQ[i]) {
         // S_i is scheduled.
         //   V_i = (1/Y_ii) * ( conj(S_i)/conj(V_i) - sum )
-        const S = C.make(Psch[i], Qsch[i]);
-        const Sconj = C.conj(S);
-        const Vconj = C.conj(V[i]);
-        const ratio = C.div(Sconj, Vconj);
-        const rhs = C.sub(ratio, sum);
-        const Vnew = C.div(rhs, Y[i][i]);
+        const S = C_local.make(Psch[i], Qsch[i]);
+        const Sconj = C_local.conj(S);
+        const Vconj = C_local.conj(V[i]);
+        const ratio = C_local.div(Sconj, Vconj);
+        const rhs = C_local.sub(ratio, sum);
+        const Vnew = C_local.div(rhs, Y[i][i]);
         V[i] = Vnew;
       } else if (isPV[i]) {
         // |V_i| is fixed; Q_i must be computed from the current V_i.
@@ -106,31 +106,31 @@ if (typeof window !== "undefined") {
         //  the network.)
         //
         // Then use the real part Psch[i] (fixed) and the computed Q_i.
-        const Vconj = C.conj(V[i]);
+        const Vconj = C_local.conj(V[i]);
         // total current into network at bus i:
-        const Ibus = C.add(C.mul(Y[i][i], V[i]), sum);
-        const Sbus = C.mul(V[i], C.conj(Ibus)); // S = V * conj(I)
+        const Ibus = C_local.add(C_local.mul(Y[i][i], V[i]), sum);
+        const Sbus = C_local.mul(V[i], C_local.conj(Ibus)); // S = V * conj(I)
         const Qcalc = Sbus.im;
 
         // Re-solve V with scheduled P and the computed Q
-        const S = C.make(Psch[i], Qcalc);
-        const Sconj = C.conj(S);
-        const ratio = C.div(Sconj, Vconj);
-        const rhs = C.sub(ratio, sum);
-        let Vnew = C.div(rhs, Y[i][i]);
+        const S = C_local.make(Psch[i], Qcalc);
+        const Sconj = C_local.conj(S);
+        const ratio = C_local.div(Sconj, Vconj);
+        const rhs = C_local.sub(ratio, sum);
+        let Vnew = C_local.div(rhs, Y[i][i]);
 
         // Rescale magnitude to the specified value, keep new angle
         const Vspec = system.buses[i].V;
-        const VmagNew = C.abs(Vnew);
+        const VmagNew = C_local.abs(Vnew);
         if (VmagNew > 0) {
           const scale = Vspec / VmagNew;
-          Vnew = C.make(Vnew.re * scale, Vnew.im * scale);
+          Vnew = C_local.make(Vnew.re * scale, Vnew.im * scale);
         }
         V[i] = Vnew;
       }
 
       // Track convergence by voltage change
-      const dV = C.abs(C.sub(V[i], Vprev[i]));
+      const dV = C_local.abs(C_local.sub(V[i], Vprev[i]));
       if (dV > maxDelta) maxDelta = dV;
     }
 
@@ -143,18 +143,18 @@ if (typeof window !== "undefined") {
   }
 
   // --- Build result object, same schema as solveNewton ---
-  const Vmag = V.map(v => C.abs(v));
-    const Vang = V.map(v => C.angle(v)); // radians
+  const Vmag = V.map(v => C_local.abs(v));
+    const Vang = V.map(v => C_local.angle(v)); // radians
 
   // Compute final Pcalc and Qcalc at every bus from network equations
   const Pcalc = new Array(n).fill(0);
   const Qcalc = new Array(n).fill(0);
   for (let i = 0; i < n; i++) {
-    let Ibus = C.make(0, 0);
+    let Ibus = C_local.make(0, 0);
     for (let j = 0; j < n; j++) {
-      Ibus = C.add(Ibus, C.mul(Y[i][j], V[j]));
+      Ibus = C_local.add(Ibus, C_local.mul(Y[i][j], V[j]));
     }
-    const Sbus = C.mul(V[i], C.conj(Ibus));
+    const Sbus = C_local.mul(V[i], C_local.conj(Ibus));
     Pcalc[i] = Sbus.re;
     Qcalc[i] = Sbus.im;
   }

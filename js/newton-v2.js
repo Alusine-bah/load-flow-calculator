@@ -1,19 +1,18 @@
 // newton-v2.js
 // Adapter between PowerSystem V2 model and Newton solver
-// Converts solver output into common LoadFlowResult format
+// Converts solver output into common LoadFlowResult_local format
 
-var solveNewton, LoadFlowResult;
+let solveNewton_local, LoadFlowResult_local;
 
 if (typeof require !== "undefined") {
-  ({ solveNewton } = require("./newton.js"));
-  ({ LoadFlowResult } = require("./results.js"));
+  ({ solveNewton: solveNewton_local } = require("./newton.js"));
+  ({ LoadFlowResult: LoadFlowResult_local } = require("./results.js"));
 }
 
 if (typeof window !== "undefined") {
-  solveNewton = window.solveNewton;
-  LoadFlowResult = window.LoadFlowResult;
+  solveNewton_local = window.solveNewton;
+  LoadFlowResult_local = window.LoadFlowResult;
 }
-
 
 function solveNewtonV2(powerSystem) {
 
@@ -125,7 +124,7 @@ function solveNewtonV2(powerSystem) {
   // Run existing Newton solver
   // ---------------------------------------
 
-  const solverResult = solveNewton(system);
+  const solverResult = solveNewton_local(system);
 
 
 
@@ -133,7 +132,7 @@ function solveNewtonV2(powerSystem) {
   // Convert to common result model
   // ---------------------------------------
 
-  const result = new LoadFlowResult({
+  const result = new LoadFlowResult_local({
 
     method: "Newton-Raphson",
 
