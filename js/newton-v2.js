@@ -2,7 +2,7 @@
 // Adapter between PowerSystem V2 model and Newton solver
 // Converts solver output into common LoadFlowResult_local format
 
-let solveNewton_local, LoadFlowResult_local;
+var solveNewton_local, LoadFlowResult_local;
 
 if (typeof require !== "undefined") {
   ({ solveNewton: solveNewton_local } = require("./newton.js"));

@@ -2,7 +2,7 @@
 // Adapter between PowerSystem V2 model and existing Gauss-Seidel solver
 // Converts output into common LoadFlowResult_local format
 
-let solveGaussSeidel_local, LoadFlowResult_local;
+var solveGaussSeidel_local, LoadFlowResult_local;
 
 if (typeof require !== "undefined") {
   ({ solveGaussSeidel: solveGaussSeidel_local } = require("./gaussseidel.js"));
