@@ -2031,6 +2031,10 @@
 
       system =
         readTables();
+console.log("SOLVE INPUT SYSTEM:", system);
+console.log("BUSES:", system.buses);
+console.log("LINES:", system.lines);
+console.log("VALIDATE:", system.validate());
 
     } catch (error) {
 
