@@ -15,6 +15,18 @@ function calculateVoltageImpact(
   const impact = [];
 
 
+  // Handle failed contingency solution
+
+  if (
+    !outageResult ||
+    !outageResult.buses
+  ) {
+
+    return impact;
+
+  }
+
+
 
   for (
     let i = 0;
@@ -70,6 +82,27 @@ function calculateLossImpact(
   outageSystem,
   outageResult
 ) {
+
+
+  // Failed outage solution
+
+  if (
+    !outageResult ||
+    !outageResult.buses
+  ) {
+
+    return {
+
+      before: 0,
+
+      after: 0,
+
+      change: 0
+
+    };
+
+  }
+
 
 
   const baseFlows =

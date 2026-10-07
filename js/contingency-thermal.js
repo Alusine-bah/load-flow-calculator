@@ -14,6 +14,14 @@ function calculateThermalImpact(
   outageSystem,
   outageResult
 ) {
+  if (
+    !outageResult ||
+    !outageResult.buses
+  ) {
+
+    return [];
+
+  }
 
 
   const baseFlows =
