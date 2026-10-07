@@ -1825,16 +1825,23 @@
             );
 
 
-          const report =
-            window.createContingencyRankingReport(
-              rawRanking
-            );
+         const report =
+  window.createContingencyRankingReport(
+    rawRanking
+  );
 
 
-          renderContingencyResults(
-            report,
-            target
-          );
+const summary =
+  window.createContingencySummary(
+    report
+  );
+
+
+renderContingencyResults(
+  report,
+  summary,
+  target
+);
 
         } catch (error) {
 
@@ -1864,9 +1871,10 @@
   // ================================================================
 
   function renderContingencyResults(
-    report,
-    target
-  ) {
+  report,
+  summary,
+  target
+) {
 
     if (!report ||
         report.length === 0) {
@@ -1887,7 +1895,88 @@
 
     let html =
       '';
+html +=
 
+  '<div class="contingency-summary">' +
+
+  '<h3>N-1 Security Summary</h3>' +
+
+  '<p>' +
+
+  '<strong>Total:</strong> ' +
+  summary.total +
+
+  ' &nbsp; | &nbsp; ' +
+
+  '<strong>Failed:</strong> ' +
+  summary.failed +
+
+  ' &nbsp; | &nbsp; ' +
+
+  '<strong>Critical:</strong> ' +
+  summary.critical +
+
+  ' &nbsp; | &nbsp; ' +
+
+  '<strong>High:</strong> ' +
+  summary.high +
+
+  ' &nbsp; | &nbsp; ' +
+
+  '<strong>Medium:</strong> ' +
+  summary.medium +
+
+  ' &nbsp; | &nbsp; ' +
+
+  '<strong>Normal:</strong> ' +
+  summary.normal +
+
+  '</p>' +
+
+
+  '<p>' +
+
+  '<strong>Worst Overall:</strong> ' +
+
+  escapeHtml(summary.worstOverall) +
+
+  ' (' +
+
+  formatNum(summary.worstOverallScore,3) +
+
+  ')'
+
+  +
+
+  '<br>' +
+
+
+  '<strong>Reason:</strong> ' +
+
+  escapeHtml(summary.worstReason)
+
+  +
+
+  '</p>' +
+
+
+
+  '<p>' +
+
+  '<strong>Worst Converged:</strong> ' +
+
+  escapeHtml(summary.worstConverged) +
+
+  ' (' +
+
+  formatNum(summary.worstConvergedScore,3) +
+
+  ')' +
+
+  '</p>' +
+
+
+  '</div>';
 
     html +=
 
