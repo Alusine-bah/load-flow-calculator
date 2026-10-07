@@ -2,37 +2,54 @@
 // N-1 contingency severity ranking
 //
 // Ranks all possible line outages
+// Includes power-flow convergence failure handling
 
 
 function calculateSeverityScore(
   impact,
-  thermalImpact
+  thermalImpact,
+  converged = true
 ) {
+
+
+  // ------------------------------------------------
+  // Failed power flow
+  // ------------------------------------------------
+
+  if (!converged) {
+
+    return 1000;
+
+  }
+
 
 
   let score = 0;
 
 
 
-  // Voltage penalty
+  // ------------------------------------------------
+  // Voltage deviation penalty
+  // ------------------------------------------------
 
   for (const v of impact.voltageImpact) {
 
 
-    const drop =
+    const deviation =
       Math.abs(v.deltaV);
 
 
-
     score +=
-      drop * 100;
+      deviation * 100;
 
 
   }
 
 
 
-  // Loss penalty
+  // ------------------------------------------------
+  // Loss variation penalty
+  // ------------------------------------------------
 
   score +=
 
@@ -42,7 +59,9 @@ function calculateSeverityScore(
 
 
 
-  // Thermal penalty
+  // ------------------------------------------------
+  // Thermal overload penalty
+  // ------------------------------------------------
 
   for (const line of thermalImpact) {
 
@@ -54,7 +73,7 @@ function calculateSeverityScore(
 
 
       score +=
-        (line.after - 100);
+        line.after - 100;
 
 
     }
@@ -82,13 +101,10 @@ function runContingencyRanking(
 
 
 
-  for (
-    const outageLine of system.lines
-  ) {
+  for (const outageLine of system.lines) {
 
 
     const contingency =
-
       analyzeContingency(
 
         system,
@@ -99,46 +115,57 @@ function runContingencyRanking(
 
           to:
             outageLine.to
+        },
 
-        }
+        options
 
       );
 
 
 
     const impact =
-
       analyzeContingencyImpact(
-
         contingency
-
       );
 
 
 
-    const thermal =
+    let thermal = [];
 
-      calculateThermalImpact(
 
-        system,
 
-        contingency.baseResult,
+    // Calculate thermal impact only
+    // if the post-contingency power flow converged
 
-        contingency.outageSystem,
+    if (contingency.converged) {
 
-        contingency.outageResult
 
-      );
+      thermal =
+        calculateThermalImpact(
+
+          system,
+
+          contingency.baseResult,
+
+          contingency.outageSystem,
+
+          contingency.outageResult
+
+        );
+
+
+    }
 
 
 
     const score =
-
       calculateSeverityScore(
 
         impact,
 
-        thermal
+        thermal,
+
+        contingency.converged
 
       );
 
@@ -150,7 +177,13 @@ function runContingencyRanking(
 
         `${outageLine.from}-${outageLine.to}`,
 
+
       score,
+
+
+      converged:
+
+        contingency.converged,
 
 
       impact,
@@ -167,9 +200,9 @@ function runContingencyRanking(
 
   results.sort(
 
-    (a,b)=>
+    (a,b) =>
 
-    b.score - a.score
+      b.score - a.score
 
   );
 
@@ -178,7 +211,6 @@ function runContingencyRanking(
   return results;
 
 }
-
 
 
 
@@ -199,7 +231,7 @@ function printContingencyRanking(
 
 
   console.log(
-    "Rank   Outage   Score"
+    "Rank   Outage   Score   Status"
   );
 
 
@@ -217,7 +249,9 @@ function printContingencyRanking(
 
       `${r.outage}      ` +
 
-      `${r.score.toFixed(3)}`
+      `${r.score.toFixed(3)}      ` +
+
+      `${r.converged ? "OK" : "FAILED"}`
 
     );
 
@@ -226,7 +260,10 @@ function printContingencyRanking(
 
   }
 
+
 }
+
+
 
 
 

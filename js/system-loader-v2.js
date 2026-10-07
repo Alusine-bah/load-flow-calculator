@@ -1,64 +1,151 @@
 // system-loader-v2.js
 // Convert existing SYSTEMS data into PowerSystem V2 objects
 
+
 function loadSystemV2(name) {
+
 
   const source = window.SYSTEMS[name];
 
+
   if (!source) {
-    throw new Error(`System "${name}" not found`);
+
+    throw new Error(
+      `System "${name}" not found`
+    );
+
   }
+
+
+
 
 
   const system = new PowerSystem({
-    name: source.name,
-    baseMVA: source.baseMVA,
-    baseKV: source.baseKV
+
+    name:
+      source.name,
+
+    baseMVA:
+      source.baseMVA,
+
+    baseKV:
+      source.baseKV
+
   });
 
 
+
+
+
+  // -----------------------------------------
   // Convert buses
+  // -----------------------------------------
 
   for (const bus of source.buses) {
 
-    system.addBus(new Bus({
-      id: bus.id,
-      type: bus.type,
-      V: bus.V,
-      delta: bus.delta,
 
-      Pgen: bus.Pgen,
-      Qgen: bus.Qgen,
+    system.addBus(
 
-      Pload: bus.Pload,
-      Qload: bus.Qload,
+      new Bus({
 
-      baseKV: source.baseKV
-    }));
+        id:
+          bus.id,
+
+        type:
+          bus.type,
+
+        V:
+          bus.V,
+
+        delta:
+          bus.delta,
+
+
+        Pgen:
+          bus.Pgen,
+
+        Qgen:
+          bus.Qgen,
+
+
+        Pload:
+          bus.Pload,
+
+        Qload:
+          bus.Qload,
+
+
+        baseKV:
+          source.baseKV
+
+      })
+
+    );
+
 
   }
 
 
+
+
+
+  // -----------------------------------------
   // Convert lines
+  // -----------------------------------------
 
   for (const line of source.lines) {
 
-    system.addLine(new Line({
-      from: line.from,
-      to: line.to,
 
-      R: line.R,
-      X: line.X,
-      B: line.B,
+    system.addLine(
 
-      G: line.G || 0
-    }));
+      new Line({
+
+        from:
+          line.from,
+
+
+        to:
+          line.to,
+
+
+        R:
+          line.R,
+
+
+        X:
+          line.X,
+
+
+        B:
+          line.B,
+
+
+        G:
+          line.G || 0,
+
+
+        // Preserve thermal rating
+        ratingMVA:
+          line.ratingMVA ?? null
+
+      })
+
+    );
+
 
   }
 
 
+
+
+
   return system;
+
 }
 
 
-window.loadSystemV2 = loadSystemV2;
+
+
+
+window.loadSystemV2 =
+  loadSystemV2;
