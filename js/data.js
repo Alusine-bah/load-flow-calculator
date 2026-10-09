@@ -55,18 +55,21 @@ const SYSTEMS = {
       { id: 9, type: "PQ",    V: 1.0,   delta: 0.0, Pgen: 0.0,  Qgen: 0.0, Pload: 0.0,  Qload: 0.0  },
     ],
 
-    lines: [
-      // from, to, R (pu), X (pu), B (pu)
-      { from: 1, to: 4, R: 0.0,    X: 0.0576, B: 0.0 },
-      { from: 4, to: 5, R: 0.017,  X: 0.092,  B: 0.158 },
-      { from: 5, to: 6, R: 0.039,  X: 0.170,  B: 0.358 },
-      { from: 3, to: 6, R: 0.0,    X: 0.0586, B: 0.0 },
-      { from: 6, to: 7, R: 0.0119, X: 0.1008, B: 0.209 },
-      { from: 7, to: 8, R: 0.0085, X: 0.072,  B: 0.149 },
-      { from: 8, to: 2, R: 0.0,    X: 0.0625, B: 0.0 },
-      { from: 8, to: 9, R: 0.032,  X: 0.161,  B: 0.306 },
-      { from: 9, to: 4, R: 0.01,   X: 0.085,  B: 0.176 },
-    ],
+   lines: [
+ // from, to, R (pu), X (pu), B (pu), ratingMVA
+// NOTE: ratingMVA values below are assumed demo thermal limits
+// for educational analysis and are not authoritative IEEE 9-bus ratings.
+
+  { from: 1, to: 4, R: 0.0,    X: 0.0576, B: 0.0,   ratingMVA: 250 },
+  { from: 4, to: 5, R: 0.017,  X: 0.092,  B: 0.158, ratingMVA: 250 },
+  { from: 5, to: 6, R: 0.039,  X: 0.170,  B: 0.358, ratingMVA: 150 },
+  { from: 3, to: 6, R: 0.0,    X: 0.0586, B: 0.0,   ratingMVA: 300 },
+  { from: 6, to: 7, R: 0.0119, X: 0.1008, B: 0.209, ratingMVA: 150 },
+  { from: 7, to: 8, R: 0.0085, X: 0.072,  B: 0.149, ratingMVA: 150 },
+  { from: 8, to: 2, R: 0.0,    X: 0.0625, B: 0.0,   ratingMVA: 300 },
+  { from: 8, to: 9, R: 0.032,  X: 0.161,  B: 0.306, ratingMVA: 150 },
+  { from: 9, to: 4, R: 0.01,   X: 0.085,  B: 0.176, ratingMVA: 150 },
+],
   },
 
   // ----------------------------------------------------------------

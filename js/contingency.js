@@ -124,7 +124,7 @@ function analyzeContingency(
 
 
 
-  return {
+ return {
 
     outage,
 
@@ -136,8 +136,11 @@ function analyzeContingency(
 
     outageResult,
 
-    converged:
-      outageResult.converged
+   converged:
+  !!(
+    outageResult &&
+    outageResult.converged === true
+  )
 
 };
 
