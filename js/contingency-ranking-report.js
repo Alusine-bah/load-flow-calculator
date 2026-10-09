@@ -2,11 +2,13 @@
 // Explanation layer for N-1 contingency ranking
 //
 // Provides:
-// - Severity classification
+// - Topology / solver status reporting
+// - Severity classification for converged contingencies
 // - Worst voltage deviation
-// - Worst thermal loading
+// - Worst thermal overload
 // - Violation summary
 // - Human-readable reason
+// - N-1 security summary
 //
 // NOTE:
 // Severity score remains a heuristic comparison metric.
@@ -51,9 +53,12 @@ function findMaximumLoading(
   thermal = []
 ) {
 
-  let max = null;
+  let max =
+    null;
 
-  let line = null;
+
+  let line =
+    null;
 
 
   for (const t of thermal) {
@@ -61,8 +66,7 @@ function findMaximumLoading(
 
     if (
       t.after !== null &&
-      Number.isFinite(t.after) &&
-      t.after > 100
+      Number.isFinite(t.after)
     ) {
 
 
@@ -71,7 +75,10 @@ function findMaximumLoading(
         t.after > max
       ) {
 
-        max = t.after;
+
+        max =
+          t.after;
+
 
         line =
           `${t.from}-${t.to}`;
@@ -85,9 +92,11 @@ function findMaximumLoading(
 
   return {
 
-    value:max,
+    value:
+      max,
 
-    line:line
+    line:
+      line
 
   };
 
@@ -101,18 +110,21 @@ function findMaximumVoltageDeviation(
   voltageImpact = []
 ) {
 
+  let max =
+    null;
 
-  let max = null;
 
-  let bus = null;
+  let bus =
+    null;
 
 
   for (const v of voltageImpact) {
 
 
     const deviation =
-      Math.abs(v.deltaV);
-
+      Math.abs(
+        v.deltaV
+      );
 
 
     if (
@@ -125,32 +137,28 @@ function findMaximumVoltageDeviation(
         deviation;
 
 
-     bus =
-deviation > 0.05
-?
-v.bus
-:
-null;
+      bus =
+        deviation > 0.05
+          ? v.bus
+          : null;
 
     }
 
   }
 
 
-
   return {
 
- value:
-   max,
+    value:
+      max,
 
- bus:
-   max !== null && max > 0.05
-   ?
-   bus
-   :
-   null
+    bus:
+      max !== null &&
+      max > 0.05
+        ? bus
+        : null
 
-};
+  };
 
 }
 
@@ -162,8 +170,8 @@ function countVoltageViolations(
   voltageImpact = []
 ) {
 
-
-  let count = 0;
+  let count =
+    0;
 
 
   for (const v of voltageImpact) {
@@ -192,8 +200,8 @@ function countThermalViolations(
   thermal = []
 ) {
 
-
-  let count = 0;
+  let count =
+    0;
 
 
   for (const t of thermal) {
@@ -201,6 +209,7 @@ function countThermalViolations(
 
     if (
       t.after !== null &&
+      Number.isFinite(t.after) &&
       t.after > 100
     ) {
 
@@ -227,8 +236,9 @@ function determineReason(
 ) {
 
 
-
-  if (severity === "FAILED") {
+  if (
+    severity === "FAILED"
+  ) {
 
     return "Power flow failed to converge";
 
@@ -236,12 +246,10 @@ function determineReason(
 
 
 
-
   if (
     violations.thermal > 0 &&
     maximumLoading.line !== null
   ) {
-
 
     return (
 
@@ -255,13 +263,10 @@ function determineReason(
 
 
 
-
-
   if (
     violations.voltage > 0 &&
     maximumVoltageDeviation.bus !== null
   ) {
-
 
     return (
 
@@ -275,9 +280,19 @@ function determineReason(
 
 
 
+  if (
+    severity === "CRITICAL"
+  ) {
+
+    return "Critical combined system impact";
+
+  }
 
 
-  if (severity === "HIGH") {
+
+  if (
+    severity === "HIGH"
+  ) {
 
     return "High combined system impact";
 
@@ -285,7 +300,9 @@ function determineReason(
 
 
 
-  if (severity === "MEDIUM") {
+  if (
+    severity === "MEDIUM"
+  ) {
 
     return "Moderate system impact";
 
@@ -305,10 +322,9 @@ function createContingencyRankingReport(
   ranking
 ) {
 
-
   return ranking.map(
 
-    (item,index)=>{
+    (item, index) => {
 
 
       const rank =
@@ -316,13 +332,25 @@ function createContingencyRankingReport(
 
 
 
+      // ------------------------------------------------
+      // ISLANDED
+      // ------------------------------------------------
+
       if (
-        item.converged === false
+        item.status === "ISLANDED" ||
+        item.islanded === true
       ) {
 
 
-        return {
+        const islandCount =
+          Number.isFinite(
+            item.islandCount
+          )
+            ? item.islandCount
+            : null;
 
+
+        return {
 
           rank,
 
@@ -335,49 +363,163 @@ function createContingencyRankingReport(
             item.score,
 
 
-          converged:false,
+          status:
+            "ISLANDED",
 
 
-          severity:"FAILED",
+          converged:
+            false,
+
+
+          islanded:
+            true,
+
+
+          islandCount:
+            islandCount,
+
+
+          islands:
+            Array.isArray(item.islands)
+              ? item.islands
+              : [],
+
+
+          severity:
+            "ISLANDED",
+
+
+          reason:
+            islandCount !== null
+              ? `Network separated into ${islandCount} islands`
+              : "Network islanding detected",
+
+
+          violations: {
+
+            voltage:
+              null,
+
+            thermal:
+              null
+
+          },
+
+
+          worstBus:
+            null,
+
+
+          worstLine:
+            null,
+
+
+          maximumOverload:
+            null,
+
+
+          maximumVoltageDrop:
+            null
+
+        };
+
+      }
+
+
+
+      // ------------------------------------------------
+      // FAILED — non-islanding solver failure
+      // ------------------------------------------------
+
+      if (
+        item.converged !== true
+      ) {
+
+
+        return {
+
+          rank,
+
+
+          outage:
+            item.outage,
+
+
+          score:
+            item.score,
+
+
+          status:
+            "FAILED",
+
+
+          converged:
+            false,
+
+
+          islanded:
+            false,
+
+
+          islandCount:
+            item.islandCount || 1,
+
+
+          islands:
+            Array.isArray(item.islands)
+              ? item.islands
+              : [],
+
+
+          severity:
+            "FAILED",
 
 
           reason:
             "Power flow failed to converge",
 
 
-          violations:{
-            voltage:null,
-            thermal:null
+          violations: {
+
+            voltage:
+              null,
+
+            thermal:
+              null
+
           },
 
 
-          worstBus:null,
-
-          worstLine:null,
-
-
-          maximumOverload:null,
+          worstBus:
+            null,
 
 
-          maximumVoltageDrop:null
+          worstLine:
+            null,
 
+
+          maximumOverload:
+            null,
+
+
+          maximumVoltageDrop:
+            null
 
         };
-
 
       }
 
 
 
-
+      // ------------------------------------------------
+      // CONVERGED
+      // ------------------------------------------------
 
       const maximumLoading =
 
         findMaximumLoading(
           item.thermal
         );
-
-
 
 
 
@@ -391,10 +533,7 @@ function createContingencyRankingReport(
 
 
 
-
-
       const violations = {
-
 
         voltage:
 
@@ -417,8 +556,6 @@ function createContingencyRankingReport(
 
 
 
-
-
       const severity =
 
         classifySeverity(
@@ -431,10 +568,7 @@ function createContingencyRankingReport(
 
 
 
-
-
       return {
-
 
         rank,
 
@@ -447,10 +581,32 @@ function createContingencyRankingReport(
           item.score,
 
 
-        converged:true,
+        status:
+          "CONVERGED",
 
 
-        severity,
+        converged:
+          true,
+
+
+        islanded:
+          false,
+
+
+        islandCount:
+          item.islandCount || 1,
+
+
+        islands:
+          Array.isArray(item.islands)
+            ? item.islands
+            : [],
+
+
+        severity:
+
+
+          severity,
 
 
         reason:
@@ -468,9 +624,7 @@ function createContingencyRankingReport(
           ),
 
 
-
         violations,
-
 
 
         worstBus:
@@ -478,11 +632,9 @@ function createContingencyRankingReport(
           maximumVoltageDeviation.bus,
 
 
-
         worstLine:
 
           maximumLoading.line,
-
 
 
         maximumOverload:
@@ -490,19 +642,15 @@ function createContingencyRankingReport(
           maximumLoading.value,
 
 
-
         maximumVoltageDrop:
 
           maximumVoltageDeviation.value
 
-
       };
-
 
     }
 
   );
-
 
 }
 
@@ -513,7 +661,6 @@ function createContingencyRankingReport(
 function printContingencyRankingReport(
   report
 ) {
-
 
   console.log(
     "\nCONTINGENCY SECURITY RANKING"
@@ -540,10 +687,11 @@ function printContingencyRankingReport(
 
     );
 
-
   }
 
 }
+
+
 
 
 
@@ -561,23 +709,35 @@ function createContingencySummary(
       report.length,
 
 
+    islanded:
+      0,
+
+
     failed:
       0,
+
 
     critical:
       0,
 
+
     high:
       0,
 
+
     medium:
       0,
+
 
     normal:
       0,
 
 
     worstOverall:
+      null,
+
+
+    worstOverallStatus:
       null,
 
 
@@ -596,14 +756,23 @@ function createContingencySummary(
     worstReason:
       null
 
-};
+  };
 
 
 
   for (const r of report) {
 
 
-    switch(r.severity) {
+    switch (
+      r.severity
+    ) {
+
+
+      case "ISLANDED":
+
+        summary.islanded++;
+
+        break;
 
 
       case "FAILED":
@@ -644,41 +813,58 @@ function createContingencySummary(
 
 
 
+    // ------------------------------------------------
+    // Worst overall contingency
+    //
+    // Report is already ordered with islanded cases
+    // ahead of failed and converged cases.
+    // For equal scores, preserve the first ranked case.
+    // ------------------------------------------------
 
-   // Worst overall contingency
-
-if (
-  r.score > summary.worstOverallScore
-) {
-
-  summary.worstOverallScore =
-    r.score;
-
-  summary.worstOverall =
-    r.outage;
-
-  summary.worstReason =
-    r.reason;
-
-}
+    if (
+      r.score >
+      summary.worstOverallScore
+    ) {
 
 
+      summary.worstOverallScore =
+        r.score;
 
-// Worst converged contingency
 
-if (
-  r.converged === true &&
-  r.score > summary.worstConvergedScore
-) {
+      summary.worstOverall =
+        r.outage;
 
-  summary.worstConvergedScore =
-    r.score;
 
-  summary.worstConverged =
-    r.outage;
+      summary.worstOverallStatus =
+        r.status;
 
-}
 
+      summary.worstReason =
+        r.reason;
+
+    }
+
+
+
+    // ------------------------------------------------
+    // Worst converged contingency
+    // ------------------------------------------------
+
+    if (
+      r.converged === true &&
+      r.score >
+      summary.worstConvergedScore
+    ) {
+
+
+      summary.worstConvergedScore =
+        r.score;
+
+
+      summary.worstConverged =
+        r.outage;
+
+    }
 
   }
 
@@ -700,70 +886,102 @@ function printContingencySummary(
     "\nN-1 SECURITY SUMMARY"
   );
 
+
   console.log(
     "------------------------------"
   );
+
 
   console.log(
     "Total contingencies:",
     summary.total
   );
 
+
+  console.log(
+    "ISLANDED:",
+    summary.islanded
+  );
+
+
   console.log(
     "FAILED:",
     summary.failed
   );
+
 
   console.log(
     "CRITICAL:",
     summary.critical
   );
 
+
   console.log(
     "HIGH:",
     summary.high
   );
+
 
   console.log(
     "MEDIUM:",
     summary.medium
   );
 
+
   console.log(
     "NORMAL:",
     summary.normal
   );
+
 
   console.log(
     "\nWorst overall:",
     summary.worstOverall
   );
 
+
+  console.log(
+    "Worst overall status:",
+    summary.worstOverallStatus
+  );
+
+
   console.log(
     "Worst overall score:",
-    Number.isFinite(summary.worstOverallScore)
+    Number.isFinite(
+      summary.worstOverallScore
+    )
       ? summary.worstOverallScore.toFixed(3)
       : "N/A"
   );
+
 
   console.log(
     "Reason:",
     summary.worstReason
   );
 
+
   console.log(
     "\nWorst converged:",
     summary.worstConverged
   );
 
+
   console.log(
     "Worst converged score:",
-    Number.isFinite(summary.worstConvergedScore)
+    Number.isFinite(
+      summary.worstConvergedScore
+    )
       ? summary.worstConvergedScore.toFixed(3)
       : "N/A"
   );
 
 }
+
+
+
+
 
 window.createContingencyRankingReport =
   createContingencyRankingReport;
@@ -771,6 +989,7 @@ window.createContingencyRankingReport =
 
 window.printContingencyRankingReport =
   printContingencyRankingReport;
+
 
 window.createContingencySummary =
   createContingencySummary;

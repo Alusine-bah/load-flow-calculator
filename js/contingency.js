@@ -68,7 +68,151 @@ function removeLine(
 }
 
 
+function getConnectedComponents(system) {
 
+  const adjacency =
+    new Map();
+
+
+  for (const bus of system.buses) {
+
+    adjacency.set(
+      bus.id,
+      []
+    );
+
+  }
+
+
+  for (const line of system.lines) {
+
+    if (
+      adjacency.has(line.from) &&
+      adjacency.has(line.to)
+    ) {
+
+      adjacency
+        .get(line.from)
+        .push(line.to);
+
+
+      adjacency
+        .get(line.to)
+        .push(line.from);
+
+    }
+
+  }
+
+
+  const visited =
+    new Set();
+
+
+  const components =
+    [];
+
+
+  for (const bus of system.buses) {
+
+    if (
+      visited.has(bus.id)
+    ) {
+
+      continue;
+
+    }
+
+
+    const component =
+      [];
+
+
+    const stack =
+      [bus.id];
+
+
+    while (
+      stack.length > 0
+    ) {
+
+      const current =
+        stack.pop();
+
+
+      if (
+        visited.has(current)
+      ) {
+
+        continue;
+
+      }
+
+
+      visited.add(current);
+
+      component.push(current);
+
+
+      const neighbours =
+        adjacency.get(current) || [];
+
+
+      for (
+        const neighbour
+        of neighbours
+      ) {
+
+        if (
+          !visited.has(neighbour)
+        ) {
+
+          stack.push(neighbour);
+
+        }
+
+      }
+
+    }
+
+
+    components.push(
+      component
+    );
+
+  }
+
+
+  return components;
+
+}
+
+
+
+
+
+function detectIslanding(system) {
+
+  const components =
+    getConnectedComponents(
+      system
+    );
+
+
+  return {
+
+    islanded:
+      components.length > 1,
+
+    islandCount:
+      components.length,
+
+    islands:
+      components
+
+  };
+
+}
 
 
 function analyzeContingency(
@@ -107,7 +251,10 @@ function analyzeContingency(
 
   );
 
-
+const islanding =
+  detectIslanding(
+    outageSystem
+  );
 
   const outageResult =
     solvePowerFlow(
@@ -124,26 +271,34 @@ function analyzeContingency(
 
 
 
- return {
+return {
 
-    outage,
+  outage,
 
-    system,
+  system,
 
-    outageSystem,
+  outageSystem,
 
-    baseResult,
+  baseResult,
 
-    outageResult,
+  outageResult,
 
-   converged:
-  !!(
-    outageResult &&
-    outageResult.converged === true
-  )
+  islanded:
+    islanding.islanded,
+
+  islandCount:
+    islanding.islandCount,
+
+  islands:
+    islanding.islands,
+
+  converged:
+    !!(
+      outageResult &&
+      outageResult.converged === true
+    )
 
 };
-
 }
 
 
@@ -212,3 +367,9 @@ window.analyzeContingency =
 
 window.printContingencyResult =
   printContingencyResult;
+window.getConnectedComponents =
+  getConnectedComponents;
+
+
+window.detectIslanding =
+  detectIslanding;

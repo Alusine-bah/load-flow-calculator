@@ -1908,6 +1908,11 @@ html +=
 
   ' &nbsp; | &nbsp; ' +
 
+  '<strong>Islanded:</strong> ' +
+  summary.islanded +
+
+  ' &nbsp; | &nbsp; ' +
+
   '<strong>Failed:</strong> ' +
   summary.failed +
 
@@ -1942,13 +1947,39 @@ html +=
 
   ' (' +
 
-  formatNum(summary.worstOverallScore,3) +
+  escapeHtml(summary.worstOverallStatus) +
 
-  ')'
+  ', Score ' +
 
-  +
+  formatNum(summary.worstOverallScore, 3) +
+
+  ')' +
 
   '<br>' +
+
+  '<strong>Reason:</strong> ' +
+
+  escapeHtml(summary.worstReason) +
+
+  '</p>' +
+
+
+  '<p>' +
+
+  '<strong>Worst Converged:</strong> ' +
+
+  escapeHtml(summary.worstConverged) +
+
+  ' (Score ' +
+
+  formatNum(summary.worstConvergedScore, 3) +
+
+  ')' +
+
+  '</p>' +
+
+
+  '</div>'; +
 
 
   '<strong>Reason:</strong> ' +

@@ -2,7 +2,15 @@
 // N-1 contingency severity ranking
 //
 // Ranks all possible line outages
-// Includes power-flow convergence failure handling
+// Distinguishes:
+// - CONVERGED
+// - FAILED
+// - ISLANDED
+//
+// NOTE:
+// Severity score is a heuristic comparison metric.
+// Topology status is kept separate from the numeric score.
+
 
 
 function calculateSeverityScore(
@@ -13,7 +21,7 @@ function calculateSeverityScore(
 
 
   // ------------------------------------------------
-  // Failed power flow
+  // Non-converged power flow
   // ------------------------------------------------
 
   if (!converged) {
@@ -41,7 +49,6 @@ function calculateSeverityScore(
 
     score +=
       deviation * 100;
-
 
   }
 
@@ -71,13 +78,10 @@ function calculateSeverityScore(
       line.after > 100
     ) {
 
-
       score +=
         line.after - 100;
 
-
     }
-
 
   }
 
@@ -91,17 +95,83 @@ function calculateSeverityScore(
 
 
 
+function getContingencyStatus(
+  contingency
+) {
+
+
+  if (
+    contingency.islanded === true
+  ) {
+
+    return "ISLANDED";
+
+  }
+
+
+  if (
+    contingency.converged !== true
+  ) {
+
+    return "FAILED";
+
+  }
+
+
+  return "CONVERGED";
+
+}
+
+
+
+
+
+function getStatusPriority(
+  status
+) {
+
+
+  if (
+    status === "ISLANDED"
+  ) {
+
+    return 3;
+
+  }
+
+
+  if (
+    status === "FAILED"
+  ) {
+
+    return 2;
+
+  }
+
+
+  return 1;
+
+}
+
+
+
+
+
 function runContingencyRanking(
   system,
   options = {}
 ) {
 
 
-  const results = [];
+  const results =
+    [];
 
 
 
-  for (const outageLine of system.lines) {
+  for (
+    const outageLine
+    of system.lines
+  ) {
 
 
     const contingency =
@@ -123,6 +193,13 @@ function runContingencyRanking(
 
 
 
+    const status =
+      getContingencyStatus(
+        contingency
+      );
+
+
+
     const impact =
       analyzeContingencyImpact(
         contingency
@@ -130,14 +207,19 @@ function runContingencyRanking(
 
 
 
-    let thermal = [];
+    let thermal =
+      [];
 
 
 
-    // Calculate thermal impact only
-    // if the post-contingency power flow converged
+    // ------------------------------------------------
+    // Calculate thermal impact only when
+    // post-contingency power flow converged
+    // ------------------------------------------------
 
-    if (contingency.converged) {
+    if (
+      contingency.converged === true
+    ) {
 
 
       thermal =
@@ -152,7 +234,6 @@ function runContingencyRanking(
           contingency.outageResult
 
         );
-
 
     }
 
@@ -174,16 +255,29 @@ function runContingencyRanking(
     results.push({
 
       outage:
-
         `${outageLine.from}-${outageLine.to}`,
 
 
       score,
 
 
-      converged:
+      status,
 
+
+      converged:
         contingency.converged,
+
+
+      islanded:
+        contingency.islanded === true,
+
+
+      islandCount:
+        contingency.islandCount || 1,
+
+
+      islands:
+        contingency.islands || [],
 
 
       impact,
@@ -193,16 +287,46 @@ function runContingencyRanking(
 
     });
 
-
   }
 
 
 
+  // ------------------------------------------------
+  // Ranking order
+  //
+  // 1. ISLANDED
+  // 2. FAILED
+  // 3. CONVERGED
+  //
+  // Within the same status, higher score ranks first.
+  // ------------------------------------------------
+
   results.sort(
 
-    (a,b) =>
+    (a, b) => {
 
-      b.score - a.score
+
+      const priorityDifference =
+
+        getStatusPriority(b.status) -
+        getStatusPriority(a.status);
+
+
+      if (
+        priorityDifference !== 0
+      ) {
+
+        return priorityDifference;
+
+      }
+
+
+      return (
+        b.score -
+        a.score
+      );
+
+    }
 
   );
 
@@ -211,6 +335,7 @@ function runContingencyRanking(
   return results;
 
 }
+
 
 
 
@@ -226,7 +351,7 @@ function printContingencyRanking(
 
 
   console.log(
-    "------------------------------"
+    "--------------------------------"
   );
 
 
@@ -236,7 +361,8 @@ function printContingencyRanking(
 
 
 
-  let rank = 1;
+  let rank =
+    1;
 
 
 
@@ -251,7 +377,7 @@ function printContingencyRanking(
 
       `${r.score.toFixed(3)}      ` +
 
-      `${r.converged ? "OK" : "FAILED"}`
+      `${r.status}`
 
     );
 
@@ -259,7 +385,6 @@ function printContingencyRanking(
     rank++;
 
   }
-
 
 }
 
@@ -269,6 +394,10 @@ function printContingencyRanking(
 
 window.calculateSeverityScore =
   calculateSeverityScore;
+
+
+window.getContingencyStatus =
+  getContingencyStatus;
 
 
 window.runContingencyRanking =
