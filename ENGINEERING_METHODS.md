@@ -56,7 +56,7 @@ Each modeled transmission branch currently contains:
 - charging susceptance,
 - optional thermal rating.
 
-The current implementation focuses on transmission line modeling. Other power system components, such as transformers, shunt compensation devices, and phase-shifting transformers, are not currently modeled.
+The current implementation focuses on transmission branch modeling. Other components, such as transformers, shunt compensation devices, and phase-shifting transformers, are not currently modeled.
 
 ## Implementation
 
@@ -81,7 +81,7 @@ Object conversion:
 
 All electrical quantities in the calculator are represented using the per-unit system unless otherwise specified.
 
-The base impedance is calculated as:
+The base impedance is:
 
 \[
 Z_{base}=\frac{V_{base}^{2}}{S_{base}}
@@ -94,7 +94,7 @@ where:
 
 The calculator uses a system-wide apparent power base. Voltage bases are defined according to the modeled network voltage level.
 
-Using per-unit quantities allows electrical parameters from different voltage and power levels to be represented using a common reference system.
+The per-unit system allows electrical parameters from different voltage and power levels to be represented using a common reference system.
 
 ## Implementation
 
@@ -174,10 +174,6 @@ Bus model:
 
 `js/models.js`
 
-## Reference
-
-- Saadat, H. *Power System Analysis*, Load Flow Analysis chapter.
-- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
 ## Validation
 
 Bus classification and solver behavior are verified using:
@@ -186,3 +182,106 @@ Bus classification and solver behavior are verified using:
 - `test-newton-v2.js`
 - `test-gaussseidel-v2.js`
 - `verify-residuals.js`
+
+## Reference
+
+- Saadat, H. *Power System Analysis*, Load Flow Analysis chapter.
+- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
+
+---
+
+# 5. Bus Admittance Matrix (Y-bus)
+
+## Method
+
+The bus admittance matrix represents the electrical relationship between bus voltage phasors and current injection phasors.
+
+The network equation is:
+
+\[
+I_{bus}=Y_{bus}V_{bus}
+\]
+
+where:
+
+- \(I_{bus}\) is the bus current injection vector,
+- \(V_{bus}\) is the bus voltage vector,
+- \(Y_{bus}\) is the bus admittance matrix.
+
+The Y-bus matrix forms the electrical network foundation for load-flow calculations and other power system studies.
+
+---
+
+## Mathematical Formulation
+
+For a branch connecting buses \(i\) and \(j\), the series impedance is:
+
+\[
+Z_{ij}=R_{ij}+jX_{ij}
+\]
+
+The series admittance is:
+
+\[
+y_{ij}=\frac{1}{Z_{ij}}
+\]
+
+For transmission line charging, the shunt admittance is divided equally between both ends:
+
+\[
+y_{sh}=j\frac{B_{ij}}{2}
+\]
+
+The diagonal elements of the Y-bus matrix are calculated by summing connected branch admittances:
+
+\[
+Y_{ii}=\sum(y_{ij}+y_{sh})
+\]
+
+The off-diagonal elements represent the negative mutual admittance between connected buses:
+
+\[
+Y_{ij}=-y_{ij}
+\]
+
+For buses without direct electrical connection:
+
+\[
+Y_{ij}=0
+\]
+
+---
+
+## Implementation
+
+Y-bus construction:
+
+`js/ybus.js`
+
+Updated implementation:
+
+`js/ybus-v2.js`
+
+Main functions:
+
+- `buildYbus()`
+- `buildYbusV2()`
+
+---
+
+## Validation
+
+Y-bus implementation is verified using:
+
+- `test-ybus-v2.js`
+- `test-ybus-comparison.js`
+
+Validation includes comparison of calculated Y-bus elements against known reference values for selected benchmark systems.
+
+---
+
+## Reference
+
+- Saadat, H. *Power System Analysis*, Load Flow Analysis chapter.
+- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
+- Stevenson, W. D. *Elements of Power System Analysis*.
