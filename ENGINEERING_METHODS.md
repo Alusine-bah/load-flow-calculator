@@ -560,3 +560,234 @@ The present AC power-flow implementation does not currently include:
 - fast-decoupled load flow.
 
 These limitations must be considered when interpreting results for systems that require these modeling features.
+
+---
+
+# 7. Transmission Line Power Flow and Losses
+
+## Method
+
+After the AC power-flow solution has converged, the solved bus-voltage phasors are used to calculate the electrical power flowing through each modeled transmission branch.
+
+For a branch connecting buses \(i\) and \(j\), the series impedance is:
+
+\[
+Z_{ij}=R_{ij}+jX_{ij}
+\]
+
+and the series admittance is:
+
+\[
+y_{ij}=\frac{1}{Z_{ij}}
+\]
+
+If the branch includes total charging susceptance \(B_{ij}\), half of the shunt charging is assigned to each terminal:
+
+\[
+y_{sh}=j\frac{B_{ij}}{2}
+\]
+
+The terminal current flowing from bus \(i\) toward bus \(j\) is:
+
+\[
+I_{ij}
+=
+(V_i-V_j)y_{ij}
++
+V_i y_{sh}
+\]
+
+The current flowing from bus \(j\) toward bus \(i\) is:
+
+\[
+I_{ji}
+=
+(V_j-V_i)y_{ij}
++
+V_j y_{sh}
+\]
+
+The corresponding complex powers are:
+
+\[
+S_{ij}=V_i I_{ij}^{*}
+\]
+
+and:
+
+\[
+S_{ji}=V_j I_{ji}^{*}
+\]
+
+where \((\cdot)^*\) denotes the complex conjugate.
+
+The real and reactive components are obtained from:
+
+\[
+S_{ij}=P_{ij}+jQ_{ij}
+\]
+
+and:
+
+\[
+S_{ji}=P_{ji}+jQ_{ji}
+\]
+
+These quantities describe the electrical power flow observed from each end of the branch.
+
+---
+
+## 7.1 Branch Losses
+
+The net complex power absorbed by the modeled branch is calculated from the sum of the terminal complex powers:
+
+\[
+S_{loss,ij}
+=
+S_{ij}+S_{ji}
+\]
+
+Therefore:
+
+\[
+P_{loss,ij}
+=
+\operatorname{Re}(S_{loss,ij})
+\]
+
+and:
+
+\[
+Q_{loss,ij}
+=
+\operatorname{Im}(S_{loss,ij})
+\]
+
+The total system branch losses are obtained by summing the calculated branch losses across the modeled network.
+
+Active-power loss represents real power dissipated by branch resistance.
+
+Reactive-power balance is influenced by both branch series reactance and modeled line-charging susceptance. Therefore, reactive branch loss or absorption should not be interpreted in exactly the same way as resistive active-power loss.
+
+---
+
+## 7.2 Apparent Power
+
+The apparent-power magnitude at each branch terminal is calculated from the corresponding complex power:
+
+\[
+|S_{ij}|
+=
+\sqrt{P_{ij}^{2}+Q_{ij}^{2}}
+\]
+
+and:
+
+\[
+|S_{ji}|
+=
+\sqrt{P_{ji}^{2}+Q_{ji}^{2}}
+\]
+
+Because the sending-end and receiving-end powers are generally different, branch loading assessment may need to consider both terminal values.
+
+---
+
+## 7.3 Engineering Unit Conversion
+
+Internal load-flow calculations are performed primarily in per-unit quantities.
+
+Where physical engineering units are required, per-unit power values are converted using the system apparent-power base.
+
+For example:
+
+\[
+P_{MW}
+=
+P_{pu}S_{base}
+\]
+
+\[
+Q_{MVAr}
+=
+Q_{pu}S_{base}
+\]
+
+and:
+
+\[
+S_{MVA}
+=
+|S_{pu}|S_{base}
+\]
+
+For a three-phase system, the base current associated with a voltage base \(V_{base}\) and apparent-power base \(S_{base}\) is:
+
+\[
+I_{base}
+=
+\frac{S_{base}}
+{\sqrt{3}V_{base}}
+\]
+
+A per-unit current may therefore be converted using:
+
+\[
+I_{actual}
+=
+I_{pu}I_{base}
+\]
+
+Correct current conversion requires the appropriate voltage base for the location being analyzed.
+
+---
+
+## Implementation
+
+Transmission-line flow calculations:
+
+`js/line-flow.js`
+
+Engineering-unit conversions:
+
+`js/units.js`
+
+Main functions include:
+
+- `calculateLineFlows()`
+- per-unit to MW conversion utilities,
+- per-unit to MVAr conversion utilities,
+- per-unit to MVA conversion utilities,
+- current conversion utilities.
+
+---
+
+## Validation
+
+Transmission-line power-flow calculations are checked using:
+
+- `test-line-flow.js`
+- `test-units.js`
+
+The validation process includes:
+
+- calculation of sending-end and receiving-end branch powers,
+- branch-loss calculation,
+- consistency of per-unit and engineering-unit conversions,
+- use of converged bus voltages from the load-flow solution.
+
+Line-flow results depend directly on the correctness of:
+
+1. system branch data,
+2. Y-bus/network modeling,
+3. converged bus-voltage phasors,
+4. system base quantities.
+
+Therefore, transmission-line results are interpreted as downstream calculations of the verified load-flow state.
+
+---
+
+## Reference
+
+- Saadat, H. *Power System Analysis*, transmission-line and load-flow analysis sections.
+- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
