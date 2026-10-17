@@ -1231,3 +1231,449 @@ Application-specific voltage limits must therefore be supplied or justified sepa
 - Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
 
 Specific acceptable voltage limits for an actual transmission network should be obtained from the applicable grid code, system operator, utility criteria, or other governing engineering requirement.
+
+---
+
+# 10. N-1 Contingency Analysis
+
+## Method
+
+N-1 contingency analysis evaluates the response of the modeled power system after the removal of one transmission branch at a time.
+
+For each candidate branch outage, the analysis:
+
+1. solves the intact base-case network,
+2. creates a copy of the network model,
+3. removes the selected branch,
+4. checks the remaining network topology for islanding,
+5. solves the post-contingency network,
+6. compares the post-contingency state with the base case,
+7. evaluates voltage and thermal impacts,
+8. assigns a contingency status and ranking result.
+
+The present implementation considers single transmission-branch outages.
+
+It does not currently perform automatic N-1 simulation of generators, transformers, shunts, or other equipment categories.
+
+---
+
+## 10.1 Branch Outage Simulation
+
+For a contingency involving branch \(i-j\), that branch is removed from the copied system model:
+
+\[
+\mathcal{L}_{post}
+=
+\mathcal{L}_{base}
+-
+\{(i,j)\}
+\]
+
+where:
+
+- \(\mathcal{L}_{base}\) is the set of modeled branches in the intact system,
+- \(\mathcal{L}_{post}\) is the branch set after the outage.
+
+The AC power-flow calculation is then executed on the modified network.
+
+The base and post-contingency states are retained separately so that their electrical quantities can be compared.
+
+---
+
+## 10.2 Islanding Detection
+
+Removing a branch can separate the network into multiple electrically disconnected components.
+
+The implementation represents the post-contingency network as a graph:
+
+- buses are graph nodes,
+- remaining transmission branches are graph edges.
+
+Connected components are identified from the resulting topology.
+
+If the number of connected components is greater than one:
+
+\[
+N_{components} > 1
+\]
+
+the contingency is classified as an islanding event.
+
+The analysis records:
+
+- whether islanding occurred,
+- the number of islands,
+- the bus identifiers contained within each island.
+
+Topology assessment is kept separate from numerical power-flow convergence.
+
+An islanding event is therefore not interpreted merely as a large numerical severity score.
+
+It is reported explicitly as:
+
+`ISLANDED`
+
+---
+
+## 10.3 Post-Contingency Convergence Status
+
+After the selected branch is removed, the power-flow solver attempts to solve the modified network.
+
+A contingency is classified according to the following status logic:
+
+### ISLANDED
+
+The network has separated into more than one connected component.
+
+### FAILED
+
+The network is not classified as islanded, but the post-contingency power-flow solution does not converge successfully.
+
+### CONVERGED
+
+The post-contingency network remains connected and the power-flow solution converges successfully.
+
+These status categories distinguish:
+
+- topology failure,
+- numerical solution failure,
+- successfully solved contingencies.
+
+This distinction is important because a power-flow convergence failure and physical network islanding are not the same condition.
+
+---
+
+## 10.4 Voltage Impact
+
+For each bus \(i\), the contingency voltage change is calculated as:
+
+\[
+\Delta V_i
+=
+V_i^{post}
+-
+V_i^{base}
+\]
+
+where:
+
+- \(V_i^{base}\) is the intact-system voltage magnitude,
+- \(V_i^{post}\) is the voltage magnitude after the selected outage.
+
+This quantity represents the change caused by the contingency.
+
+It is different from the nominal voltage deviation described in Section 9:
+
+\[
+V_i-1.0
+\]
+
+The current contingency-ranking report treats:
+
+\[
+|\Delta V_i| > 0.05\ pu
+\]
+
+as a project-level voltage-impact threshold.
+
+This value is currently an internal analysis rule.
+
+It must not be interpreted as a universal utility, IEEE, NERC, or grid-code voltage criterion unless separately justified by an applicable engineering requirement.
+
+---
+
+## 10.5 Active-Power Loss Impact
+
+The total active-power branch loss is calculated for both the base and post-contingency states.
+
+The contingency loss change is:
+
+\[
+\Delta P_{loss}
+=
+P_{loss}^{post}
+-
+P_{loss}^{base}
+\]
+
+A positive value indicates increased calculated active-power loss after the outage.
+
+A negative value indicates reduced calculated active-power loss.
+
+Loss variation is used as one component of the current contingency comparison metric.
+
+---
+
+## 10.6 Thermal Impact
+
+For contingencies with a usable post-contingency solution, branch loading is recalculated after the outage.
+
+For a rated branch:
+
+\[
+Loading_{post}(\%)
+=
+\frac{S_{post}}{Rating_{MVA}}
+\times100
+\]
+
+The thermal-impact module records:
+
+- pre-contingency loading,
+- post-contingency loading,
+- outage status,
+- warning or overload status.
+
+The removed branch itself is reported as:
+
+`OUTAGE`
+
+The current thermal-impact implementation uses project-defined status thresholds:
+
+- loading below \(90\%\): `NORMAL`,
+- loading from \(90\%\) up to the overload boundary: `WARNING`,
+- loading at or above approximately \(100\%\): `OVERLOAD`.
+
+These labels are application-level reporting rules.
+
+The physical validity of the result still depends on the provenance of the assigned branch rating, as described in Section 8.
+
+---
+
+## 10.7 Contingency Severity Score
+
+The project currently computes a numerical contingency severity score for comparison and ordering of contingencies.
+
+For a converged contingency, the score combines:
+
+1. absolute bus-voltage changes,
+2. absolute change in active-power losses,
+3. thermal loading above \(100\%\).
+
+The implemented comparison metric can be summarized as:
+
+\[
+Score
+=
+100
+\sum_i
+|\Delta V_i|
++
+100
+|\Delta P_{loss}|
++
+\sum_k
+\max(0,Loading_k-100)
+\]
+
+where:
+
+- \(\Delta V_i\) is the bus-voltage magnitude change in per unit,
+- \(\Delta P_{loss}\) is the active-power loss change in per unit,
+- \(Loading_k\) is the post-contingency loading percentage of branch \(k\).
+
+For a non-converged contingency, the current implementation assigns:
+
+\[
+Score=1000
+\]
+
+as an internal comparison value.
+
+This value is not a physical quantity and is not an industry-standard contingency performance index.
+
+The severity score is therefore a project heuristic used for relative sorting and reporting.
+
+It must not be presented as an IEEE, NERC, IEC, utility, or universally accepted security index.
+
+---
+
+## 10.8 Ranking Order
+
+The current ranking procedure gives priority to contingency status before comparing the numerical severity score.
+
+The ordering is:
+
+1. `ISLANDED`
+2. `FAILED`
+3. `CONVERGED`
+
+Within the same status category, contingencies with larger numerical scores are ranked ahead of contingencies with smaller scores.
+
+This approach intentionally prevents an islanding event from being treated as merely another numerical voltage or thermal deviation.
+
+---
+
+## 10.9 Severity Classification
+
+For successfully converged contingencies, the current reporting layer classifies the heuristic severity score using project-defined ranges.
+
+The implemented categories are:
+
+\[
+Score \geq 100
+\]
+
+`CRITICAL`
+
+\[
+20 \leq Score < 100
+\]
+
+`HIGH`
+
+\[
+5 \leq Score < 20
+\]
+
+`MEDIUM`
+
+\[
+Score < 5
+\]
+
+`NORMAL`
+
+These thresholds are internal project classification rules.
+
+They are not currently derived from a verified external transmission-planning standard.
+
+They are intended only to provide consistent relative categorization within the application.
+
+---
+
+## 10.10 Violation Reporting
+
+The contingency report identifies the most significant calculated effects for converged cases.
+
+Reported quantities include:
+
+- maximum post-contingency branch loading,
+- maximum bus-voltage change,
+- number of voltage-impact violations,
+- number of thermal violations,
+- worst affected bus,
+- worst affected branch,
+- human-readable reason for the ranking.
+
+For islanded or failed contingencies, voltage and thermal violation fields may be unavailable because a normal connected post-contingency operating state has not been established.
+
+These conditions are reported primarily through their topology or solver status.
+
+---
+
+## Implementation
+
+Core contingency simulation:
+
+`js/contingency.js`
+
+Voltage and loss impact analysis:
+
+`js/contingency-analysis.js`
+
+Thermal impact analysis:
+
+`js/contingency-thermal.js`
+
+Contingency ranking:
+
+`js/contingency-ranking.js`
+
+Ranking and explanation report:
+
+`js/contingency-ranking-report.js`
+
+Main functions include:
+
+- `analyzeContingency()`
+- `getConnectedComponents()`
+- `detectIslanding()`
+- `analyzeContingencyImpact()`
+- `calculateVoltageImpact()`
+- `calculateLossImpact()`
+- `calculateThermalImpact()`
+- `calculateSeverityScore()`
+- `getContingencyStatus()`
+- `runContingencyRanking()`
+- `createContingencyRankingReport()`
+
+---
+
+## Validation
+
+The current contingency-analysis path is exercised using:
+
+- `test-contingency.js`
+- `test-contingency-ranking.js`
+- `test-contingency-ranking-report.js`
+
+The existing tests exercise:
+
+- single-line outage simulation,
+- post-outage power-flow calculation,
+- voltage impact,
+- loss impact,
+- thermal impact,
+- contingency ranking,
+- ranking-report generation.
+
+Islanding behavior has also been exercised during development on outages that separate the modeled network.
+
+A dedicated automated islanding regression test should be maintained so that topology detection remains independently verifiable as the code evolves.
+
+---
+
+## 10.11 Current Limitations
+
+The present contingency-analysis implementation has several important limitations.
+
+### Equipment Scope
+
+Automatic contingency enumeration currently focuses on transmission-line outages.
+
+It does not yet provide equivalent automatic enumeration for:
+
+- generator outages,
+- transformer outages,
+- shunt-device outages,
+- bus outages,
+- multiple simultaneous outages.
+
+### Islanded Power Flow
+
+The current implementation detects islanding, but it does not perform a complete multi-island power-flow solution with independent slack/reference treatment and generation-load balancing inside every island.
+
+Therefore, islanding detection should be interpreted primarily as a topology-security result.
+
+### Severity Metric
+
+The numerical severity score and the `NORMAL`, `MEDIUM`, `HIGH`, and `CRITICAL` thresholds are project heuristics.
+
+They require separate engineering justification before being used for formal utility planning or operating decisions.
+
+### Voltage Threshold
+
+The current contingency voltage-change threshold of \(0.05\) pu is a project analysis threshold.
+
+It is not automatically linked to the absolute voltage limits used in Section 9.
+
+### Thermal Ratings
+
+Post-contingency overload conclusions are only as authoritative as the branch ratings supplied to the model.
+
+Demo or assumed ratings must not be treated as published system limits.
+
+### Model Fidelity
+
+Contingency results inherit the current network-model limitations described elsewhere in this document, including the absence of detailed transformer tap, phase-shifting, generator reactive-limit, and other advanced equipment models.
+
+---
+
+## Reference
+
+- Wood, A. J., Wollenberg, B. F., and Sheblé, G. B. *Power Generation, Operation, and Control*, security-analysis concepts.
+- Saadat, H. *Power System Analysis*.
+- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
+
+Formal N-1 planning criteria, allowable post-contingency voltage ranges, emergency thermal ratings, and security-performance requirements should be taken from the applicable system operator, utility, grid code, or verified reliability standard before this application is used for a specific operational or planning study.
