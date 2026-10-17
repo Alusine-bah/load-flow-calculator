@@ -791,3 +791,191 @@ Therefore, transmission-line results are interpreted as downstream calculations 
 
 - Saadat, H. *Power System Analysis*, transmission-line and load-flow analysis sections.
 - Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
+
+---
+
+# 8. Thermal Line Loading and Rating Assessment
+
+## Method
+
+Thermal loading assessment compares the calculated apparent-power flow on each modeled branch with an assigned branch rating.
+
+For a branch with thermal rating:
+
+\[
+S_{rated}
+\]
+
+the loading percentage is calculated as:
+
+\[
+Loading(\%)=
+\frac{S_{actual}}{S_{rated}}
+\times 100
+\]
+
+where \(S_{actual}\) is the apparent-power magnitude used for the loading assessment.
+
+Because the apparent power can differ between the two terminals of a branch, the implementation may evaluate the branch using the larger terminal apparent-power magnitude.
+
+A branch is considered overloaded when:
+
+\[
+Loading(\%) > 100
+\]
+
+This comparison represents a rating-based screening calculation and does not by itself reproduce the detailed conductor thermal calculations used to establish an actual transmission-line ampacity.
+
+---
+
+## 8.1 Branch Rating
+
+The branch rating is represented in MVA.
+
+Where a branch rating is available, the calculated branch apparent power is compared with the specified rating.
+
+The loading calculation is:
+
+\[
+Loading(\%)=
+\frac{S_{MVA}}{Rating_{MVA}}
+\times 100
+\]
+
+where:
+
+- \(S_{MVA}\) is the calculated apparent-power magnitude,
+- \(Rating_{MVA}\) is the assigned branch rating.
+
+A value below \(100\%\) indicates that the calculated loading is below the assigned rating.
+
+A value above \(100\%\) indicates that the calculated apparent power exceeds the assigned rating.
+
+---
+
+## 8.2 Rating Interpretation
+
+The thermal-rating calculation depends directly on the quality and provenance of the branch rating data.
+
+The current project contains branch ratings that may be used for demonstration and analysis purposes.
+
+These values must not automatically be interpreted as authoritative ratings for a published benchmark system unless an external source for those ratings has been verified.
+
+In particular, demo or assumed `ratingMVA` values are used only to exercise:
+
+- loading calculations,
+- overload detection,
+- contingency thermal assessment,
+- reporting behavior.
+
+Therefore, thermal-loading results must be interpreted as:
+
+\[
+\text{Calculated network flow}
++
+\text{assigned rating assumption}
+\]
+
+rather than as independently validated physical conductor temperature limits.
+
+---
+
+## 8.3 Thermal Status
+
+The loading result may be classified according to whether the assigned thermal rating has been exceeded.
+
+The fundamental overload condition is:
+
+\[
+Loading(\%) > 100
+\]
+
+The \(100\%\) threshold follows directly from the definition of the assigned rating.
+
+Any additional severity categories or ranking thresholds used elsewhere in the application are project-level analysis rules unless separately supported by a documented engineering standard or published reference.
+
+They must not be represented as universal transmission-system operating limits without such support.
+
+---
+
+## 8.4 Relationship to Power Flow
+
+Thermal loading is a downstream calculation.
+
+The result depends on:
+
+1. the modeled branch parameters,
+2. the Y-bus representation,
+3. the converged bus-voltage solution,
+4. the calculated branch complex power,
+5. the assigned branch rating.
+
+Therefore, an incorrect load-flow solution or incorrect branch rating will directly affect the calculated thermal-loading percentage.
+
+---
+
+## Implementation
+
+Thermal rating analysis:
+
+`js/line-rating.js`
+
+Engineering-unit and loading utilities:
+
+`js/units.js`
+
+Contingency thermal analysis:
+
+`js/contingency-thermal.js`
+
+Relevant functions include:
+
+- `analyzeLineRatings()`
+- `calculateThermalImpact()`
+- loading and MVA conversion utilities.
+
+---
+
+## Validation
+
+Thermal-loading calculations are checked using:
+
+- `test-line-rating.js`
+- `test-contingency.js`
+
+The validation includes:
+
+- apparent-power conversion to MVA,
+- comparison against assigned branch ratings,
+- loading percentage calculation,
+- overload detection,
+- post-contingency thermal-loading assessment.
+
+The validation verifies the implemented calculation logic.
+
+It does not independently establish that every rating value in the project represents an externally validated physical transmission-line limit.
+
+---
+
+## Current Limitation
+
+The project does not currently calculate dynamic or physical conductor ampacity from parameters such as:
+
+- conductor type,
+- conductor temperature,
+- ambient temperature,
+- wind speed,
+- solar heating,
+- sag limits,
+- weather conditions.
+
+Thermal assessment is therefore based on assigned MVA ratings rather than a detailed physical thermal model.
+
+---
+
+## Reference
+
+- Saadat, H. *Power System Analysis*, transmission-line power-flow concepts.
+- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
+
+Specific branch-rating values used in benchmark or demonstration systems require separate source verification before being described as authoritative system ratings.
