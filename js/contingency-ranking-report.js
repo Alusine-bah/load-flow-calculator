@@ -42,7 +42,6 @@ function classifySeverity(
 
 
   return "NORMAL";
-
 }
 
 
@@ -210,7 +209,7 @@ function countThermalViolations(
     if (
       t.after !== null &&
       Number.isFinite(t.after) &&
-      t.after > 100
+      t.after >= 100
     ) {
 
       count++;
