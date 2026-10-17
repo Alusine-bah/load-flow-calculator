@@ -979,3 +979,255 @@ Thermal assessment is therefore based on assigned MVA ratings rather than a deta
 - Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
 
 Specific branch-rating values used in benchmark or demonstration systems require separate source verification before being described as authoritative system ratings.
+
+---
+
+# 9. Voltage Profile Assessment
+
+## Method
+
+Voltage-profile assessment evaluates the solved bus-voltage magnitudes after completion of the AC power-flow calculation.
+
+For each bus \(i\), the calculated voltage magnitude is expressed in per unit as:
+
+\[
+V_i
+\]
+
+The voltage deviation relative to the nominal per-unit reference of \(1.0\) pu is calculated as:
+
+\[
+\Delta V_i(\%)
+=
+(V_i-1.0)\times100
+\]
+
+A positive value indicates a voltage magnitude above \(1.0\) pu, while a negative value indicates a voltage magnitude below \(1.0\) pu.
+
+The analysis also identifies:
+
+- minimum bus-voltage magnitude,
+- maximum bus-voltage magnitude,
+- average bus-voltage magnitude,
+- buses outside the configured assessment limits.
+
+---
+
+## 9.1 Voltage Limits
+
+The voltage-profile analysis uses a configurable lower voltage limit:
+
+\[
+V_{min}
+\]
+
+and upper voltage limit:
+
+\[
+V_{max}
+\]
+
+The current default values implemented in the project are:
+
+\[
+V_{min}=0.95\ pu
+\]
+
+and:
+
+\[
+V_{max}=1.05\ pu
+\]
+
+A bus is classified according to:
+
+\[
+V_i < V_{min}
+\]
+
+as:
+
+`LOW VOLTAGE`
+
+and:
+
+\[
+V_i > V_{max}
+\]
+
+as:
+
+`HIGH VOLTAGE`
+
+Otherwise, the bus is classified as:
+
+`NORMAL`
+
+These limits are configurable analysis thresholds.
+
+The default values used by the software must not be interpreted as universal transmission-system operating limits.
+
+Actual acceptable voltage ranges depend on factors including:
+
+- applicable grid codes,
+- utility operating criteria,
+- nominal voltage level,
+- planning requirements,
+- operating condition,
+- equipment requirements.
+
+Therefore, an engineering study intended for a specific network should use voltage limits appropriate to that system and its governing requirements.
+
+---
+
+## 9.2 Minimum and Maximum Voltage
+
+The minimum-voltage bus is determined from:
+
+\[
+V_{minimum}
+=
+\min(V_1,V_2,\ldots,V_n)
+\]
+
+The maximum-voltage bus is determined from:
+
+\[
+V_{maximum}
+=
+\max(V_1,V_2,\ldots,V_n)
+\]
+
+These quantities provide a direct indication of the most extreme voltage magnitudes in the solved network state.
+
+---
+
+## 9.3 Average Voltage
+
+The arithmetic average of the solved bus-voltage magnitudes is calculated as:
+
+\[
+V_{average}
+=
+\frac{1}{n}
+\sum_{i=1}^{n}V_i
+\]
+
+where \(n\) is the number of buses included in the solved result.
+
+The average voltage is a descriptive network summary.
+
+It must not be used alone to determine whether all individual bus voltages satisfy applicable operating requirements.
+
+---
+
+## 9.4 Relationship to Power Flow
+
+Voltage-profile analysis is a downstream assessment of the converged AC power-flow solution.
+
+The calculated voltage profile depends on:
+
+1. network topology,
+2. branch impedance and charging data,
+3. bus generation and load,
+4. bus classifications,
+5. voltage setpoints,
+6. Y-bus construction,
+7. numerical convergence of the power-flow solution.
+
+Therefore, voltage-profile assessment does not independently solve the electrical network.
+
+It evaluates voltage quantities obtained from the solved network state.
+
+---
+
+## 9.5 Interpretation of Voltage Deviation
+
+The voltage-deviation quantity:
+
+\[
+\Delta V_i(\%)
+=
+(V_i-1.0)\times100
+\]
+
+is a deviation from the nominal per-unit reference.
+
+It is different from a change in voltage between two operating conditions.
+
+For example, contingency voltage change may instead be evaluated using:
+
+\[
+\Delta V_i^{cont}
+=
+V_i^{post}
+-
+V_i^{base}
+\]
+
+These two quantities must not be interpreted as equivalent:
+
+- nominal voltage deviation compares a solved voltage with \(1.0\) pu,
+- contingency voltage deviation compares two solved operating states.
+
+---
+
+## Implementation
+
+Voltage-profile analysis:
+
+`js/voltage-analysis.js`
+
+Main function:
+
+- `analyzeVoltageProfile()`
+
+Report output:
+
+- `printVoltageProfile()`
+
+The implementation permits alternative voltage limits to be supplied through analysis options.
+
+If no alternative values are supplied, the current defaults are:
+
+- minimum voltage: `0.95 pu`
+- maximum voltage: `1.05 pu`
+
+---
+
+## Validation
+
+Voltage-profile analysis is exercised using:
+
+- `test-voltage-analysis.js`
+
+The calculation operates on bus voltages produced by the power-flow solver and verifies the analysis and reporting path for the modeled test system.
+
+The voltage-profile calculation should be distinguished from validation of the underlying AC power-flow solution.
+
+Solver correctness is assessed separately using the numerical and residual verification methods documented in Section 6.
+
+---
+
+## Current Limitation
+
+The present voltage-profile assessment applies general configurable per-unit limits.
+
+It does not automatically select voltage limits according to:
+
+- regional grid code,
+- utility-specific operating criteria,
+- transmission voltage class,
+- emergency operating state,
+- equipment-specific requirements.
+
+Application-specific voltage limits must therefore be supplied or justified separately when the calculator is used for a particular engineering study.
+
+---
+
+## Reference
+
+- Saadat, H. *Power System Analysis*.
+- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
+
+Specific acceptable voltage limits for an actual transmission network should be obtained from the applicable grid code, system operator, utility criteria, or other governing engineering requirement.
