@@ -1677,3 +1677,443 @@ Contingency results inherit the current network-model limitations described else
 - Grainger, J. J., and Stevenson, W. D. *Power System Analysis*.
 
 Formal N-1 planning criteria, allowable post-contingency voltage ranges, emergency thermal ratings, and security-performance requirements should be taken from the applicable system operator, utility, grid code, or verified reliability standard before this application is used for a specific operational or planning study.
+
+---
+
+# 11. Z-bus and Three-Phase Fault Analysis
+
+## Method
+
+The current fault-analysis module provides a simplified balanced three-phase fault calculation based on a bus-impedance matrix.
+
+The implemented calculation path is:
+
+1. construct the network Y-bus,
+2. calculate the inverse of Y-bus,
+3. use the resulting matrix as Z-bus,
+4. obtain the driving-point impedance at the selected fault bus,
+5. determine the prefault bus voltage,
+6. add the specified fault impedance,
+7. calculate the resulting fault current.
+
+The current implementation is intended as a simplified fault-analysis framework.
+
+It must not yet be interpreted as a complete protection-grade or standards-compliant short-circuit calculation.
+
+---
+
+## 11.1 Bus Impedance Matrix
+
+The current implementation calculates the bus impedance matrix from:
+
+\[
+Z_{bus}=Y_{bus}^{-1}
+\]
+
+where:
+
+- \(Y_{bus}\) is the network bus-admittance matrix,
+- \(Z_{bus}\) is the calculated bus-impedance matrix.
+
+The diagonal element:
+
+\[
+Z_{kk}
+\]
+
+at the selected fault bus \(k\) is used as the driving-point impedance seen from that bus.
+
+The implementation therefore defines:
+
+\[
+Z_{th}=Z_{kk}
+\]
+
+for the simplified fault-current calculation.
+
+---
+
+## 11.2 Fault-Bus Identification
+
+The fault bus is identified using the actual bus identifier stored in the system model.
+
+The implementation searches the system bus list for the requested bus ID and uses its corresponding matrix index.
+
+This avoids assuming that:
+
+\[
+matrix\ index = bus\ ID - 1
+\]
+
+which would only be valid for consecutively numbered buses beginning at one.
+
+If the specified bus cannot be found, the fault calculation terminates with an error.
+
+---
+
+## 11.3 Prefault Voltage
+
+When a converged load-flow result is available, the prefault voltage phasor at the selected fault bus is obtained from:
+
+\[
+V_k^{pre}
+=
+|V_k|
+\angle
+\delta_k
+\]
+
+where:
+
+- \(|V_k|\) is the solved prefault voltage magnitude,
+- \(\delta_k\) is the solved prefault voltage angle.
+
+The complex voltage is reconstructed from the magnitude and angle reported by the load-flow solution.
+
+If no load-flow result is supplied, the current implementation falls back to:
+
+\[
+V_k^{pre}=1\angle0^\circ\ pu
+\]
+
+This fallback is a modeling assumption and should not be confused with a solved prefault operating condition.
+
+---
+
+## 11.4 Three-Phase Fault Current
+
+For the currently supported balanced three-phase fault, the implemented equation is:
+
+\[
+I_f
+=
+\frac{V_k^{pre}}
+{Z_{th}+Z_f}
+\]
+
+where:
+
+- \(I_f\) is the calculated fault current,
+- \(V_k^{pre}\) is the prefault voltage phasor,
+- \(Z_{th}\) is the driving-point impedance obtained from the Z-bus diagonal,
+- \(Z_f\) is the specified fault impedance.
+
+For a bolted fault:
+
+\[
+Z_f=0
+\]
+
+and therefore:
+
+\[
+I_f
+=
+\frac{V_k^{pre}}
+{Z_{th}}
+\]
+
+The reported per-unit fault-current magnitude is:
+
+\[
+|I_f|
+\]
+
+---
+
+## 11.5 Fault Impedance
+
+The current implementation permits a fault-impedance value to be supplied.
+
+The present code represents the fault impedance as a purely real quantity:
+
+\[
+Z_f=R_f+j0
+\]
+
+Therefore, a general complex fault impedance of the form:
+
+\[
+Z_f=R_f+jX_f
+\]
+
+is not currently represented by the fault-analysis interface.
+
+This should be considered a current model limitation.
+
+---
+
+## 11.6 Fault MVA
+
+The current implementation reports a fault-MVA quantity using:
+
+\[
+S_{fault,current}
+=
+|I_f|S_{base}
+\]
+
+where:
+
+- \(|I_f|\) is the calculated per-unit fault-current magnitude,
+- \(S_{base}\) is the system apparent-power base.
+
+This is the equation implemented by the present software.
+
+For strict short-circuit engineering interpretation, this reported quantity should be reviewed because the general three-phase apparent-power relationship is:
+
+\[
+|S|
+=
+\sqrt{3}
+V_{LL}
+I
+\]
+
+and the prefault voltage may differ from \(1.0\) pu.
+
+Therefore, the current `faultMVA` output should be treated as an implementation quantity pending further verification and refinement against an authoritative short-circuit reference.
+
+---
+
+## 11.7 Fault Current in kA
+
+The current software converts the reported fault MVA to current using:
+
+\[
+I_{kA}
+=
+\frac{S_{MVA}}
+{\sqrt{3}V_{kV}}
+\]
+
+where:
+
+- \(S_{MVA}\) is the reported fault-MVA value,
+- \(V_{kV}\) is the voltage base assigned to the faulted bus.
+
+The fault-bus voltage base is selected in the following order:
+
+1. bus-specific `baseKV`,
+2. system-level `baseKV`,
+3. fallback value of `1`.
+
+Accurate physical current calculation therefore requires a correct voltage base at the fault location.
+
+The fallback value exists to prevent missing data from stopping the software, but it must not be treated as a physically valid default for engineering analysis.
+
+---
+
+## 11.8 Fault Severity Study
+
+The project includes a fault-severity comparison function that repeats the three-phase fault calculation for several specified fault-impedance values.
+
+For a selected bus, the calculation is performed for:
+
+\[
+Z_{f,1},
+Z_{f,2},
+\ldots,
+Z_{f,m}
+\]
+
+The study records:
+
+- fault impedance,
+- per-unit fault-current magnitude,
+- reported fault MVA,
+- calculated current in kA.
+
+This provides a comparative view of how the current simplified fault model responds to increasing fault resistance.
+
+The study does not introduce a separate physical fault model.
+
+It repeatedly applies the same three-phase fault equation using different fault-impedance values.
+
+---
+
+## 11.9 Fault Location Study
+
+The project also includes a fault-location comparison function.
+
+The same fault calculation is applied sequentially to every modeled bus:
+
+\[
+k=1,2,\ldots,n
+\]
+
+or, more precisely, to every bus identifier present in the system model.
+
+For each fault location, the analysis records:
+
+- bus identifier,
+- per-unit fault-current magnitude,
+- reported fault MVA,
+- current in kA.
+
+This allows relative comparison of the calculated fault strength at different buses within the same simplified network model.
+
+The result should not be interpreted as a complete protection-coordination or breaker-duty study.
+
+---
+
+## Implementation
+
+Bus-impedance calculation:
+
+`js/zbus.js`
+
+Matrix inversion:
+
+`js/matrix-inverse.js`
+
+Fault calculation:
+
+`js/fault-analysis.js`
+
+Fault-impedance comparison:
+
+`js/fault-study.js`
+
+Fault-location comparison:
+
+`js/fault-location-study.js`
+
+Engineering-unit conversion:
+
+`js/units.js`
+
+Main functions include:
+
+- `calculateZbus()`
+- `calculateFaultCurrent()`
+- `calculateFaultAnalysis()`
+- `getPrefaultVoltage()`
+- `runFaultSeverityStudy()`
+- `runFaultLocationStudy()`
+
+---
+
+## Validation
+
+The present implementation is exercised using:
+
+- `test-zbus.js`
+- `test-fault-analysis.js`
+- `test-fault-study.js`
+- `test-fault-location-study.js`
+
+### Z-bus Numerical Check
+
+The Z-bus test verifies the numerical matrix relationship:
+
+\[
+Y_{bus}Z_{bus}\approx I
+\]
+
+and checks that the maximum numerical difference from the identity matrix is below the configured test tolerance.
+
+This verifies that the matrix inversion procedure is numerically consistent for the tested systems.
+
+It does not independently verify that the underlying network model is an appropriate short-circuit equivalent.
+
+### Fault-Analysis Tests
+
+The existing fault-analysis tests exercise:
+
+- Z-bus construction,
+- prefault load-flow solution,
+- fault calculation execution,
+- non-zero fault impedance,
+- current and MVA reporting,
+- repeated calculations for several fault impedances,
+- repeated calculations at different fault buses.
+
+At present, these tests primarily verify software execution and internal calculation flow.
+
+They do not yet compare the fault-current results against a published short-circuit benchmark with independently verified expected values.
+
+External benchmark validation is therefore still required.
+
+---
+
+## 11.10 Important Modeling Limitation: Load-Flow Y-bus vs Short-Circuit Network
+
+The current implementation forms Z-bus by directly inverting the network Y-bus used by the load-flow model.
+
+For a rigorous short-circuit study, the electrical network normally requires fault-study-specific source and impedance modeling.
+
+Depending on the intended fault-analysis method, this may require representation of quantities such as:
+
+- generator internal impedances,
+- generator subtransient or transient reactances,
+- transformer impedances,
+- source equivalents,
+- grounding impedances,
+- sequence-network data.
+
+These quantities are not currently represented in the fault-analysis network model.
+
+Therefore:
+
+\[
+Z_{bus,current}
+=
+Y_{bus,loadflow}^{-1}
+\]
+
+must not automatically be interpreted as a fully validated short-circuit bus-impedance matrix.
+
+This is one of the most important limitations of the current fault-analysis implementation.
+
+---
+
+## 11.11 Unsupported Fault Types
+
+The current calculation supports only the balanced three-phase fault path.
+
+The following fault types are not currently implemented:
+
+- single-line-to-ground fault,
+- line-to-line fault,
+- double-line-to-ground fault.
+
+These fault types generally require positive-, negative-, and zero-sequence network representations and the appropriate sequence-network interconnections.
+
+The project currently does not implement these sequence networks.
+
+---
+
+## 11.12 Current Fault-Analysis Limitations
+
+The present implementation does not yet include:
+
+- positive-, negative-, and zero-sequence network construction,
+- single-line-to-ground faults,
+- line-to-line faults,
+- double-line-to-ground faults,
+- generator subtransient reactance models,
+- generator transient reactance models,
+- source Thevenin equivalents independent of the load-flow Y-bus,
+- detailed transformer short-circuit models,
+- transformer winding connection effects,
+- grounding impedance models,
+- complex fault impedance input,
+- breaker interrupting-duty calculations,
+- protection-device coordination,
+- asymmetrical fault-current components,
+- DC-offset calculations,
+- peak making current,
+- time-dependent fault-current decay,
+- formal IEC or ANSI/IEEE short-circuit calculation procedures.
+
+These limitations mean that the present module should be treated as a simplified educational and analytical framework rather than a complete utility short-circuit analysis engine.
+
+---
+
+## Reference
+
+- Saadat, H. *Power System Analysis*, fault-analysis and bus-impedance concepts.
+- Grainger, J. J., and Stevenson, W. D. *Power System Analysis*, fault-analysis and network-matrix concepts.
+
+Before the fault module is described as suitable for formal short-circuit studies, its network representation, fault-current equations, engineering-unit conversion, and benchmark results should be validated against an authoritative short-circuit reference and applicable engineering requirements.
