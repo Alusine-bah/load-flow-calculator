@@ -148,9 +148,9 @@ function solveNewtonV2(powerSystem) {
 
 
 
-  // Backfill slack bus Pgen/Qgen from computed injection.
-  // At the slack bus, actual generation = computed injection + load.
-  // At all other buses, Pgen/Qgen are the scheduled values from input.
+   // Backfill actual generation from solved bus injections.
+  // Slack-bus P/Q and PV-bus Q generation are solved quantities.
+  // PV-bus active generation remains scheduled.
 
   for (const bus of solverResult.busResults) {
 
@@ -160,9 +160,10 @@ function solveNewtonV2(powerSystem) {
       ? bus.P_calc + bus.Pload
       : bus.Pgen;
 
-    const Qgen = isSlack
-      ? bus.Q_calc + bus.Qload
-      : bus.Qgen;
+    const Qgen =
+      (bus.type === "Slack" || bus.type === "PV")
+        ? bus.Q_calc + bus.Qload
+        : bus.Qgen;
 
 
     result.addBusResult({
