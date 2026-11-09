@@ -1,5 +1,24 @@
+
 // models.js
-// Core power system data models for Load Flow Calculator v2
+// Core power system data models for Load Flow Calculator V2
+//
+// Supports:
+// - Buses
+// - Transmission lines
+// - Transformers
+// - Generators
+// - Independent bus shunts
+//
+// Transformer convention:
+// R, X, G, B are per-unit values on system base.
+// tapRatio is a positive off-nominal per-unit tap magnitude.
+// phaseShift is in degrees.
+// Transformer impedance is referred to the selected system base.
+
+
+// ======================================
+// BUS MODEL
+// ======================================
 
 class Bus {
   constructor({
@@ -40,6 +59,10 @@ class Bus {
 }
 
 
+// ======================================
+// TRANSMISSION LINE MODEL
+// ======================================
+
 class Line {
   constructor({
     from,
@@ -64,6 +87,43 @@ class Line {
 }
 
 
+// ======================================
+// TRANSFORMER MODEL
+// ======================================
+
+class Transformer {
+  constructor({
+    from,
+    to,
+    R = 0,
+    X,
+    tapRatio = 1.0,
+    phaseShift = 0,
+    ratingMVA = null,
+    G = 0,
+    B = 0
+  }) {
+    this.from = from;
+    this.to = to;
+
+    this.R = R;
+    this.X = X;
+
+    this.tapRatio = tapRatio;
+    this.phaseShift = phaseShift;
+
+    this.ratingMVA = ratingMVA;
+
+    this.G = G;
+    this.B = B;
+  }
+}
+
+
+// ======================================
+// GENERATOR MODEL
+// ======================================
+
 class Generator {
   constructor({
     busId,
@@ -73,6 +133,7 @@ class Generator {
     Qmax = 1
   }) {
     this.busId = busId;
+
     this.P = P;
     this.Vset = Vset;
 
@@ -82,6 +143,10 @@ class Generator {
 }
 
 
+// ======================================
+// SHUNT MODEL
+// ======================================
+
 class Shunt {
   constructor({
     busId,
@@ -89,11 +154,16 @@ class Shunt {
     B = 0
   }) {
     this.busId = busId;
+
     this.G = G;
     this.B = B;
   }
 }
 
+
+// ======================================
+// POWER SYSTEM MODEL
+// ======================================
 
 class PowerSystem {
   constructor({
@@ -103,15 +173,21 @@ class PowerSystem {
   } = {}) {
 
     this.name = name;
+
     this.baseMVA = baseMVA;
     this.baseKV = baseKV;
 
     this.buses = [];
     this.lines = [];
+    this.transformers = [];
     this.generators = [];
     this.shunts = [];
   }
 
+
+  // ----------------------------------
+  // Add bus
+  // ----------------------------------
 
   addBus(bus) {
     if (this.buses.some(b => b.id === bus.id)) {
@@ -122,33 +198,62 @@ class PowerSystem {
   }
 
 
+  // ----------------------------------
+  // Add transmission line
+  // ----------------------------------
+
   addLine(line) {
     this.lines.push(line);
   }
 
+
+  // ----------------------------------
+  // Add transformer
+  // ----------------------------------
+
+  addTransformer(transformer) {
+    this.transformers.push(transformer);
+  }
+
+
+  // ----------------------------------
+  // Add generator
+  // ----------------------------------
 
   addGenerator(generator) {
     this.generators.push(generator);
   }
 
 
+  // ----------------------------------
+  // Add independent shunt
+  // ----------------------------------
+
   addShunt(shunt) {
     this.shunts.push(shunt);
   }
 
+
+  // ----------------------------------
+  // Number of buses
+  // ----------------------------------
 
   get numberOfBuses() {
     return this.buses.length;
   }
 
 
+  // ==================================
+  // VALIDATION
+  // ==================================
+
   validate() {
 
     const errors = [];
 
-    // ----------------------------
+    // --------------------------------
     // Bus checks
-    // ----------------------------
+    // --------------------------------
 
     if (this.buses.length === 0) {
       errors.push("System has no buses.");
@@ -172,11 +277,20 @@ class PowerSystem {
         );
       }
 
+      if (
+        !Number.isFinite(bus.baseKV) ||
+        bus.baseKV <= 0
+      ) {
+        errors.push(
+          `Invalid voltage base at bus ${bus.id}.`
+        );
+      }
     }
 
-    // ----------------------------
+
+    // --------------------------------
     // Slack bus check
-    // ----------------------------
+    // --------------------------------
 
     const slackCount =
       this.buses.filter(b => b.type === "Slack").length;
@@ -189,21 +303,33 @@ class PowerSystem {
       errors.push("Multiple Slack buses defined.");
     }
 
-    // ----------------------------
+
+    // --------------------------------
     // Line checks
-    // ----------------------------
+    // --------------------------------
 
     for (const line of this.lines) {
 
       const fromExists =
-        this.buses.some(b => b.id === line.from);
+        ids.has(line.from);
 
       const toExists =
-        this.buses.some(b => b.id === line.to);
+        ids.has(line.to);
 
       if (!fromExists || !toExists) {
         errors.push(
           `Line ${line.from}-${line.to} references unknown bus.`
+        );
+      }
+
+      if (
+        !Number.isFinite(line.R) ||
+        !Number.isFinite(line.X) ||
+        !Number.isFinite(line.B) ||
+        !Number.isFinite(line.G)
+      ) {
+        errors.push(
+          `Line ${line.from}-${line.to} has non-finite parameters.`
         );
       }
 
@@ -212,45 +338,130 @@ class PowerSystem {
           `Line ${line.from}-${line.to} has zero impedance.`
         );
       }
-
     }
 
-    // ----------------------------
-    // Base checks
-    // ----------------------------
 
-    if (this.baseMVA <= 0) {
+    // --------------------------------
+    // Transformer checks
+    // --------------------------------
+
+    for (const transformer of this.transformers) {
+
+      const fromExists =
+        ids.has(transformer.from);
+
+      const toExists =
+        ids.has(transformer.to);
+
+      if (!fromExists || !toExists) {
+        errors.push(
+          `Transformer ${transformer.from}-${transformer.to} references unknown bus.`
+        );
+      }
+
+      if (transformer.from === transformer.to) {
+        errors.push(
+          `Transformer ${transformer.from}-${transformer.to} connects a bus to itself.`
+        );
+      }
+
+      if (
+        !Number.isFinite(transformer.R) ||
+        !Number.isFinite(transformer.X) ||
+        !Number.isFinite(transformer.tapRatio) ||
+        !Number.isFinite(transformer.phaseShift) ||
+        !Number.isFinite(transformer.G) ||
+        !Number.isFinite(transformer.B)
+      ) {
+        errors.push(
+          `Transformer ${transformer.from}-${transformer.to} has non-finite parameters.`
+        );
+      }
+
+      if (
+        transformer.R === 0 &&
+        transformer.X === 0
+      ) {
+        errors.push(
+          `Transformer ${transformer.from}-${transformer.to} has zero impedance.`
+        );
+      }
+
+      if (transformer.tapRatio <= 0) {
+        errors.push(
+          `Transformer ${transformer.from}-${transformer.to} has invalid tap ratio.`
+        );
+      }
+
+      if (
+        transformer.ratingMVA !== null &&
+        (
+          !Number.isFinite(transformer.ratingMVA) ||
+          transformer.ratingMVA <= 0
+        )
+      ) {
+        errors.push(
+          `Transformer ${transformer.from}-${transformer.to} has invalid MVA rating.`
+        );
+      }
+    }
+
+
+    // --------------------------------
+    // Base checks
+    // --------------------------------
+
+    if (
+      !Number.isFinite(this.baseMVA) ||
+      this.baseMVA <= 0
+    ) {
       errors.push("Base MVA must be positive.");
     }
+
+    if (
+      !Number.isFinite(this.baseKV) ||
+      this.baseKV <= 0
+    ) {
+      errors.push("Base kV must be positive.");
+    }
+
 
     return {
       valid: errors.length === 0,
       errors
     };
-
   }
+}
 
-}   // <-- closes PowerSystem class
 
-
-// ----------------------------
-// Exports (Browser + Node.js)
-// ----------------------------
+// ======================================
+// EXPORTS
+// Browser + Node.js
+// ======================================
 
 if (typeof window !== "undefined") {
+
   window.Bus = Bus;
   window.Line = Line;
+  window.Transformer = Transformer;
   window.Generator = Generator;
   window.Shunt = Shunt;
   window.PowerSystem = PowerSystem;
+
 }
 
-if (typeof module !== "undefined" && module.exports) {
+if (
+  typeof module !== "undefined" &&
+  module.exports
+) {
+
   module.exports = {
     Bus,
     Line,
+    Transformer,
     Generator,
     Shunt,
     PowerSystem
   };
+
 }

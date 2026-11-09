@@ -95,9 +95,19 @@ function solveNewton(system) {
       ? buildYbusV2(system)
       : buildYbus(system);
 
-  // --- 2. Identify bus indices ---
-  // 0-based indexing throughout. Bus 0 is the slack bus.
-  const slackIndex = 0;
+  // --- 2. Identify the Slack bus by type ---
+  // Bus ordering must not affect the reference bus.
+  const slackIndices = system.buses
+    .map((bus, index) => bus.type === "Slack" ? index : -1)
+    .filter(index => index !== -1);
+
+  if (slackIndices.length !== 1) {
+    throw new Error(
+      `Newton-Raphson requires exactly one Slack bus (found ${slackIndices.length}).`
+    );
+  }
+
+  const slackIndex = slackIndices[0];
 
   // --- 3. Initialize V and delta (flat start for unknowns) ---
   const Vmag = new Array(n);
